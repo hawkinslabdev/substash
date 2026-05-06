@@ -31,18 +31,20 @@ const { performers } = Astro.props;
       <li>
         <a
           href={`/performers/${performer.id}`}
-          class="flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
+          class="performer-link flex flex-col items-center gap-1.5 active:scale-95 transition-all group"
         >
-          <BlurHash
-            src={proxyImage(performer.image_path)}
-            alt={performer.name}
-            width={120}
-            height={120}
-            class="w-full aspect-square rounded-full object-cover border-2 border-[var(--color-border)]"
-          />
-          <p class="text-xs text-center truncate w-full px-1">{performer.name}</p>
+          <div class="performer-ring w-full">
+            <BlurHash
+              src={proxyImage(performer.image_path)}
+              alt={performer.name}
+              width={120}
+              height={120}
+              class="performer-avatar w-full aspect-square rounded-full object-cover block"
+            />
+          </div>
+          <p class="text-xs text-center truncate w-full px-1 group-hover:text-[var(--color-text)] transition-colors">{performer.name}</p>
           {(performer.scene_count != null || performer.image_count != null) && (
-            <p class="text-[10px] text-[var(--color-text-muted)]">
+            <p class="text-xs text-[var(--color-text-muted)]">
               {formatCount((performer.scene_count ?? 0) + (performer.image_count ?? 0))}
             </p>
           )}
@@ -51,3 +53,47 @@ const { performers } = Astro.props;
     ))
   }
 </ul>
+
+<style>
+  .performer-ring {
+    position: relative;
+    border-radius: 9999px;
+    padding: 2px;
+    aspect-ratio: 1 / 1;
+    background: var(--color-border);
+    transition: box-shadow 200ms ease;
+  }
+
+  .performer-ring::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: linear-gradient(to bottom, rgba(255, 69, 0, 0.08) 0%, rgba(255, 69, 0, 0.35) 100%);
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  .performer-link:hover .performer-ring::after,
+  .performer-link:focus-visible .performer-ring::after {
+    opacity: 1;
+  }
+
+  .performer-link:hover .performer-ring {
+    box-shadow: 0 8px 24px -4px rgba(255, 69, 0, 0.55);
+  }
+
+  .performer-avatar {
+    position: relative;
+    z-index: 2;
+    display: block;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .performer-ring,
+    .performer-ring::after {
+      transition: none;
+    }
+  }
+</style>

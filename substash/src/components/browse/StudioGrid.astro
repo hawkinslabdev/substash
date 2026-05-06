@@ -31,7 +31,7 @@ const { studios } = Astro.props;
       <li>
         <a
           href={`/studios/${studio.id}`}
-          class="flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-surface-2)] border border-[var(--color-border)] active:scale-95 transition-transform"
+          class="flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:bg-[var(--color-surface-3)] hover:border-[var(--color-text-muted)]/20 active:scale-95 transition-all"
         >
           <BlurHash
             src={proxyImage(studio.image_path)}

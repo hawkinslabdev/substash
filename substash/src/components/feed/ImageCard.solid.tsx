@@ -99,10 +99,10 @@ export default function ImageCard(props: Props) {
       {/* Title — above the media */}
       <a
         href={`/images/${image().id}`}
-        class="block px-4 pb-2 min-h-0 min-w-0"
+        class="block px-4 pb-2 min-h-0 min-w-0 hover:text-[var(--color-accent)] transition-colors"
         data-astro-prefetch="viewport"
       >
-        <h2 class="text-[15px] font-semibold leading-snug">
+        <h2 class="text-[15px] font-semibold leading-snug line-clamp-2">
           {image().title || "Untitled"}
         </h2>
       </a>
@@ -136,8 +136,23 @@ export default function ImageCard(props: Props) {
         <Show
           when={displayUrl()}
           fallback={
-            <div class="relative z-10 w-full h-full bg-[var(--color-surface-3)] flex items-center justify-center">
-              <span class="text-[var(--color-text-muted)] text-sm">
+            <div class="relative z-10 w-full h-full bg-[var(--color-surface-3)] flex flex-col items-center justify-center gap-2">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                class="text-[var(--color-text-muted)] opacity-50"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M2.25 15.75l5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+                />
+              </svg>
+              <span class="text-[var(--color-text-muted)] text-xs">
                 Unavailable
               </span>
             </div>

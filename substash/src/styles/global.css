@@ -304,4 +304,9 @@
   .icon-pulse {
     animation: none;
   }
+  button:active,
+  [role="button"]:active,
+  a:active {
+    transform: none;
+  }
 }

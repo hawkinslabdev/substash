@@ -30,7 +30,7 @@ const currentLabel = sorts.find((s) => s.key === sort)?.label ?? sort;
           "flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap shrink-0 transition-all active:scale-95",
           s.key === sort
             ? "bg-[var(--color-accent)] text-white shadow-sm"
-            : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
+            : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text)]",
         ]}
         aria-current={s.key === sort ? "page" : undefined}
       >
