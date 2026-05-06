@@ -1,0 +1,112 @@
+---
+import PageShell from "@/components/layout/PageShell.astro";
+import BottomNav from "@/components/layout/BottomNav.astro";
+import FeedContainer from "@/components/feed/FeedContainer.astro";
+import StashOffline from "@/components/ui/StashOffline.astro";
+import SortBar from "@/components/ui/SortBar.astro";
+import { stashRequest } from "@/lib/stash/client";
+import { FIND_SCENES, FIND_IMAGES } from "@/lib/stash/queries";
+import { encodeCursor, nextCursor, type CursorPayload } from "@/lib/utils/cursor";
+import { sceneToFeedItem, imageToFeedItem } from "@/lib/stash/feed-item";
+import type { FindScenesQuery, FindImagesQuery } from "@/lib/stash/types";
+import { filterByTags } from "@/lib/stash/filter";
+import { DEMO_MODE } from "astro:env/server";
+import { demoFirstPage } from "@/lib/demo";
+
+const ALLOWED_SORTS = ["random", "date", "rating"] as const;
+type Sort = (typeof ALLOWED_SORTS)[number];
+
+const rawSort = Astro.url.searchParams.get("sort") ?? "random";
+const sort: Sort = (ALLOWED_SORTS as readonly string[]).includes(rawSort)
+  ? (rawSort as Sort)
+  : "random";
+
+const TYPES_PER_PAGE = 10;
+
+const seed = sort === "random" ? (Date.now() ^ (Math.random() * 2147483647)) : undefined;
+
+const sceneSort = sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : sort;
+const imageSort = sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : sort;
+
+let items: import("@/lib/stash/feed-item").FeedItem[] = [];
+let count = 0;
+let offline = false;
+
+let demoSeed: number | undefined;
+if (DEMO_MODE) {
+  const demo = demoFirstPage(sort);
+  items = demo.items;
+  count = demo.count;
+  demoSeed = demo.seed;
+} else try {
+  const [scenesData, imagesData] = await Promise.all([
+    stashRequest<FindScenesQuery>(FIND_SCENES, {
+      filter: {
+        page: 1,
+        per_page: TYPES_PER_PAGE,
+        sort: sceneSort,
+        direction: sort !== "random" ? "DESC" : undefined,
+      },
+    }).catch((e) => { console.error("[discover] scenes fetch failed:", e); return { findScenes: { count: 0, scenes: [] } }; }),
+    stashRequest<FindImagesQuery>(FIND_IMAGES, {
+      filter: {
+        page: 1,
+        per_page: TYPES_PER_PAGE,
+        sort: imageSort,
+        direction: sort !== "random" ? "DESC" : undefined,
+      },
+    }).catch((e) => { console.error("[discover] images fetch failed:", e); return { findImages: { count: 0, images: [] } }; }),
+  ]);
+
+  const filteredScenes = filterByTags(scenesData.findScenes.scenes);
+  const filteredImages = filterByTags(imagesData.findImages.images);
+
+  const scenes = filteredScenes.map(sceneToFeedItem);
+  const images = filteredImages.map(imageToFeedItem);
+
+  const interleaved: typeof items = [];
+  const maxLen = Math.max(scenes.length, images.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < scenes.length) interleaved.push(scenes[i]);
+    if (i < images.length) interleaved.push(images[i]);
+  }
+
+  items = interleaved;
+  count = scenesData.findScenes.count + imagesData.findImages.count;
+} catch {
+  offline = true;
+}
+
+const cursorPayload: CursorPayload = { page: 1, perPage: 20, total: count, sort, seed: DEMO_MODE ? demoSeed : seed };
+---
+
+<PageShell title="Substash: Discover">
+  <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)]">
+    <h1 class="text-base font-semibold">
+      <img
+        src="/logo.svg" alt="Substash logo" class="inline w-5 h-5 mr-1 -mt-0.5"
+        />
+      Discover
+    </h1>
+  </header>
+
+  <SortBar sort={sort} baseUrl="/discover" sorts={[
+    { key: "random", label: "Random" },
+    { key: "date", label: "Recent" },
+    { key: "rating", label: "Top" },
+  ]} />
+
+  {offline ? (
+    <StashOffline />
+  ) : (
+    <FeedContainer
+      initialItems={items}
+      initialCursor={encodeCursor(cursorPayload)}
+      initialNextCursor={nextCursor(cursorPayload)}
+      initialTotal={count}
+      sort={sort}
+    />
+  )}
+
+  <BottomNav slot="nav" />
+</PageShell>

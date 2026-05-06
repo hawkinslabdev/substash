@@ -1,0 +1,41 @@
+---
+import PageShell from "@/components/layout/PageShell.astro";
+import BottomNav from "@/components/layout/BottomNav.astro";
+import TagGrid from "@/components/browse/TagGrid.astro";
+import StashOffline from "@/components/ui/StashOffline.astro";
+import { stashRequest } from "@/lib/stash/client";
+import { FIND_TAGS } from "@/lib/stash/queries";
+import type { FindTagsQuery } from "@/lib/stash/types";
+import { filterTagList } from "@/lib/stash/filter";
+import { DEMO_MODE } from "astro:env/server";
+import { DEMO_TAGS } from "@/lib/demo";
+
+Astro.response.headers.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+
+let tags: FindTagsQuery["findTags"]["tags"] = [];
+let offline = false;
+
+if (DEMO_MODE) {
+  tags = DEMO_TAGS;
+} else try {
+  const data = await stashRequest<FindTagsQuery>(FIND_TAGS, {
+    filter: { page: 1, per_page: 100, sort: "name" },
+  });
+  tags = filterTagList(data.findTags.tags);
+} catch (err) {
+  console.error("[browse] stashRequest failed:", err instanceof Error ? err.message : err);
+  offline = true;
+}
+---
+
+<PageShell title="Substash: Tags">
+  <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)]">
+    <h1 class="text-base font-semibold">
+      <img 
+        src="/logo.svg" alt="Substash logo" class="inline w-5 h-5 mr-1 -mt-0.5" 
+        />
+      Tags</h1>
+  </header>
+  {offline ? <StashOffline /> : <TagGrid tags={tags} />}
+  <BottomNav slot="nav" />
+</PageShell>

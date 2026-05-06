@@ -1,0 +1,141 @@
+---
+import PageShell from "@/components/layout/PageShell.astro";
+import BottomNav from "@/components/layout/BottomNav.astro";
+import FeedContainer from "@/components/feed/FeedContainer.astro";
+import StashOffline from "@/components/ui/StashOffline.astro";
+import SortBar from "@/components/ui/SortBar.astro";
+import { formatCount } from "@/lib/utils/format";
+import { stashRequest } from "@/lib/stash/client";
+import { FIND_TAG, FIND_SCENES, FIND_IMAGES } from "@/lib/stash/queries";
+import { encodeCursor, nextCursor } from "@/lib/utils/cursor";
+import { sceneToFeedItem, imageToFeedItem } from "@/lib/stash/feed-item";
+import type { FindTagQuery, FindScenesQuery, FindImagesQuery } from "@/lib/stash/types";
+import BlurHash from "@/components/ui/BlurHash.astro";
+import { proxyImage } from "@/lib/stash/image";
+import { filterByTags, filterTagList } from "@/lib/stash/filter";
+import { DEMO_MODE } from "astro:env/server";
+import { demoItemsFiltered, getDemoTag } from "@/lib/demo";
+
+const { slug } = Astro.params;
+Astro.response.headers.set("Cache-Control", "public, max-age=60, stale-while-revalidate=600");
+const TYPES_PER_PAGE = 10;
+
+const ALLOWED_SORTS = ["date", "rating", "random"] as const;
+type Sort = (typeof ALLOWED_SORTS)[number];
+
+const rawSort = Astro.url.searchParams.get("sort") ?? "date";
+const sort: Sort = (ALLOWED_SORTS as readonly string[]).includes(rawSort)
+  ? (rawSort as Sort)
+  : "date";
+
+const sceneSort = sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : sort;
+const imageSort = sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : sort;
+
+let items: import("@/lib/stash/feed-item").FeedItem[] = [];
+let count = 0;
+let offline = false;
+let tag: FindTagQuery["findTag"] = null;
+
+if (DEMO_MODE) {
+  tag = getDemoTag(slug!);
+  if (tag) {
+    const demo = demoItemsFiltered({ tagId: slug!, sort });
+    items = demo.items;
+    count = demo.count;
+  }
+} else try {
+  const [tagData, scenesData, imagesData] = await Promise.all([
+    stashRequest<FindTagQuery>(FIND_TAG, { id: slug }),
+    stashRequest<FindScenesQuery>(FIND_SCENES, {
+      filter: {
+        page: 1,
+        per_page: TYPES_PER_PAGE,
+        sort: sceneSort,
+        direction: sort !== "random" ? "DESC" : undefined,
+      },
+      scene_filter: { tags: { value: [slug!], modifier: "INCLUDES" } },
+    }),
+    stashRequest<FindImagesQuery>(FIND_IMAGES, {
+      filter: {
+        page: 1,
+        per_page: TYPES_PER_PAGE,
+        sort: imageSort,
+        direction: sort !== "random" ? "DESC" : undefined,
+      },
+      image_filter: { tags: { value: [slug!], modifier: "INCLUDES" } },
+    }).catch((e) => { console.error("[tag] images fetch failed:", e); return { findImages: { count: 0, images: [] } }; }),
+  ]);
+  tag = tagData.findTag;
+
+  const filteredScenes = filterByTags(scenesData.findScenes.scenes);
+  const filteredImages = filterByTags(imagesData.findImages.images);
+
+  const filteredTag = filterTagList([tag!]);
+  if (filteredTag.length === 0) {
+    tag = null;
+  }
+
+  const scenes = filteredScenes.map(sceneToFeedItem);
+  const images = filteredImages.map(imageToFeedItem);
+
+  const interleaved: typeof items = [];
+  const maxLen = Math.max(scenes.length, images.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < scenes.length) interleaved.push(scenes[i]);
+    if (i < images.length) interleaved.push(images[i]);
+  }
+
+  items = interleaved;
+  count = scenesData.findScenes.count + imagesData.findImages.count;
+} catch {
+  offline = true;
+}
+
+const displayName = tag?.name ?? slug!;
+const cursorPayload = { page: 1, perPage: 20, total: count, sort, tagId: slug };
+---
+<PageShell title={`Substash: ${displayName}`}>
+  {!tag ? (
+    <div class="flex-1 flex items-center justify-center">
+      <p class="text-[var(--color-text-muted)]">Tag not found or excluded.</p>
+    </div>
+  ) : (
+    <>
+      <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)] flex items-center gap-3">
+        <a href="/tags" class="text-[var(--color-text-muted)]">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
+          </svg>
+        </a>
+        {tag?.image_path && (
+          <BlurHash
+            src={proxyImage(tag.image_path)}
+            alt={displayName}
+            width={32}
+            height={32}
+            class="w-8 h-8 rounded-full flex-shrink-0"
+          />
+        )}
+        <h1 class="text-base font-semibold truncate">{displayName}</h1>
+        <span class="ml-auto text-xs text-[var(--color-text-muted)] shrink-0">
+          {formatCount(count)}
+        </span>
+      </header>
+
+      <SortBar sort={sort} baseUrl={`/tags/${slug}`} />
+
+      {offline ? <StashOffline /> : (
+        <FeedContainer
+          initialItems={items}
+          initialCursor={encodeCursor(cursorPayload)}
+          initialNextCursor={nextCursor(cursorPayload)}
+          initialTotal={count}
+          sort={sort}
+          tagId={slug}
+        />
+      )}
+    </>
+  )}
+
+  <BottomNav slot="nav" />
+</PageShell>

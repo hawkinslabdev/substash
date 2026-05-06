@@ -1,0 +1,50 @@
+{
+  "name": "substash",
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "astro dev --port 9456",
+    "build": "astro build",
+    "start": "node server.mjs",
+    "preview": "astro preview --port 9456",
+    "lint": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "codegen": "tsx scripts/codegen.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "prepare": "cd .. && husky substash/.husky"
+  },
+  "dependencies": {
+    "@astrojs/node": "^10.0.6",
+    "@astrojs/solid-js": "^6.0.1",
+    "@tailwindcss/vite": "^4.2.4",
+    "@tanstack/solid-query": "^5.100.7",
+    "astro": "^6.2.1",
+    "better-sqlite3": "^12.9.0",
+    "clsx": "^2.1.1",
+    "compression": "^1.8.1",
+    "drizzle-orm": "^0.45.2",
+    "graphql": "^16.13.2",
+    "graphql-request": "^7.4.0",
+    "solid-js": "^1.9.12",
+    "solid-motionone": "^1.0.4",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.2.4",
+    "ulid": "^3.0.2"
+  },
+  "overrides": {
+    "vite": "^7"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^7.0.0",
+    "@graphql-codegen/typescript": "^6.0.0",
+    "@graphql-codegen/typescript-operations": "^6.0.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "drizzle-kit": "^0.31.10",
+    "husky": "^9.1.7",
+    "prettier": "^3.8.3",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}

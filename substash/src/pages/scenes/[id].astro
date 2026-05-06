@@ -1,0 +1,236 @@
+---
+import PageShell from "@/components/layout/PageShell.astro";
+import BottomNav from "@/components/layout/BottomNav.astro";
+import BlurHash from "@/components/ui/BlurHash.astro";
+import VoteButton from "@/components/post/VoteButton.solid";
+import ShareButton from "@/components/post/ShareButton.astro";
+import CommentSection from "@/components/post/CommentSection.solid";
+import { stashRequest } from "@/lib/stash/client";
+import { FIND_SCENE } from "@/lib/stash/queries";
+import { proxyImage } from "@/lib/stash/image";
+import { DEMO_MODE } from "astro:env/server";
+import type { FindSceneQuery } from "@/lib/stash/types";
+import { resolveTitle, formatOriginDisplay } from "@/lib/utils/subreddit";
+import { filterTagList } from "@/lib/stash/filter";
+import { timeAgo } from "@/lib/utils/markdown";
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/");
+if (DEMO_MODE) return Astro.redirect("/");
+Astro.response.headers.set("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+
+let scene: FindSceneQuery["findScene"] = null;
+try {
+  const data = await stashRequest<FindSceneQuery>(FIND_SCENE, { id });
+  scene = data.findScene;
+} catch {
+  return Astro.redirect("/");
+}
+if (!scene) return Astro.redirect("/");
+
+// Block access only if the scene has tags and every one is excluded
+const sceneTags = scene.tags ?? [];
+if (sceneTags.length > 0 && filterTagList(sceneTags).length === 0) {
+  return Astro.redirect("/404");
+}
+
+const streamUrl = scene.paths.stream ? `/api/stash/stream/${id}` : null;
+const file = scene.files[0];
+const mediaAspect = file ? `${file.width} / ${file.height}` : "16 / 9";
+const duration = file?.duration;
+const durationStr = duration
+  ? `${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, "0")}`
+  : null;
+
+const sub = resolveTitle(scene.title, scene.files?.[0]?.path, null, {
+  studio: scene.studio?.name ?? null,
+  performers: (scene.performers ?? []).map((p) => p.name),
+  tags: (scene.tags ?? []).map((t) => t.name),
+  date: scene.date || scene.created_at?.substring(0, 10) || null,
+  rating: scene.rating100 ?? null,
+});
+const displayTitle = sub.cleanTitle || "Untitled";
+const originDisplay = formatOriginDisplay(sub.origin, sub.displayName);
+const creditLine = sub.credit;
+const dayDisplay = sub.day;
+---
+
+<PageShell
+  title={`Substash: ${displayTitle}`}
+  preloadUrl={scene.paths.screenshot ?? undefined}
+  preloadAs="image"
+>
+  <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)] border-b border-[var(--color-border)] flex items-center gap-3">
+    <button onclick="history.back()" aria-label="Go back" class="text-[var(--color-text-muted)]">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
+      </svg>
+    </button>
+    <p class="text-sm font-medium truncate">{displayTitle}</p>
+  </header>
+
+  {/* Video */}
+  {streamUrl ? (
+    <div class="relative w-full bg-black overflow-hidden" style={`aspect-ratio: ${mediaAspect}; view-transition-name: scene-${id}`}>
+      {/* Blurred background to fill pillarbox/letterbox */}
+      {proxyImage(scene.paths.screenshot) && (
+        <img
+          src={proxyImage(scene.paths.screenshot)}
+          alt=""
+          class="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-60"
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+        />
+      )}
+      <video
+        id="scene-video"
+        src={streamUrl}
+        poster={proxyImage(scene.paths.screenshot) ?? undefined}
+        controls
+        muted
+        playsinline
+        preload="none"
+        class="relative w-full h-full object-contain"
+      />
+    </div>
+  ) : (
+    <BlurHash
+      src={proxyImage(scene.paths.screenshot)}
+      alt={scene.title ?? "Video"}
+      width={file?.width ?? 1280}
+      height={file?.height ?? 720}
+      class="w-full"
+      style={`aspect-ratio: ${mediaAspect}; view-transition-name: scene-${id}`}
+    />
+  )}
+
+  {/* Meta */}
+  <div class="px-4 py-4 space-y-3">
+
+    {/* Performers: primary identity, above title */}
+    {scene.performers.length > 0 && (
+      <div class="flex flex-wrap gap-2">
+        {scene.performers.map((p) => (
+          <a
+            href={`/performers/${p.id}`}
+            class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[var(--color-surface-3)] border border-[var(--color-border)] text-sm hover:border-[var(--color-accent)] transition-colors"
+          >
+            <BlurHash src={proxyImage(p.image_path)} alt={p.name} width={28} height={28} class="w-7 h-7 rounded-full" />
+            {p.name}
+          </a>
+        ))}
+      </div>
+    )}
+
+    <div class="flex flex-col gap-0.5">
+      <a
+        href={`#`}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center text-xs font-medium text-[var(--color-accent)] hover:opacity-75 transition-opacity"
+      >
+        {originDisplay}
+      </a>
+      {creditLine && (
+        <p class="text-xs text-[var(--color-text-muted)]">{creditLine}</p>
+      )}
+    </div>
+
+    <h1 class="text-base font-semibold leading-snug">{displayTitle}</h1>
+
+    <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--color-text-muted)]">
+      {scene.studio && (
+        <a href={`/studios/${scene.studio.id}`} class="hover:text-[var(--color-text)]">
+          {scene.studio.name}
+        </a>
+      )}
+      {durationStr && <span>{durationStr}</span>}
+      {(scene.date || scene.created_at) && (
+        <time datetime={scene.date ?? scene.created_at?.substring(0, 10)}>
+            {dayDisplay ?? timeAgo(new Date(scene.date ? scene.date + "T00:00:00" : scene.created_at!))}
+          </time>
+      )}
+    </div>
+
+    {/* Tags */}
+    {scene.tags.length > 0 && (
+      <div class="flex flex-wrap gap-1.5">
+        {scene.tags.map((t) => (
+          <a
+            href={`/tags/${t.id}`}
+            class="px-2 py-0.5 rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)] text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+          >
+            {t.name}
+          </a>
+        ))}
+      </div>
+    )}
+
+    {/* Details */}
+    {scene.details && (
+      <p class="text-sm text-[var(--color-text-muted)] leading-relaxed">{scene.details}</p>
+    )}
+
+    {/* Actions */}
+    <div class="flex items-center gap-2 pt-1">
+      <VoteButton
+        client:visible
+        sceneId={scene.id}
+        initialCount={scene.o_counter ?? 0}
+        type="o_counter"
+        label="Like"
+        title={displayTitle}
+        thumbnailUrl={scene.paths.screenshot ?? undefined}
+      />
+      <ShareButton stashId={id} mediaType="scene" title={displayTitle} />
+      <a
+        href={`/api/stash/open?type=scene&id=${id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] border border-[var(--color-border)] active:scale-95 transition-all hover:text-[var(--color-text)] min-h-[44px]"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline stroke-linecap="round" stroke-linejoin="round" points="15 3 21 3 21 9"/>
+          <line stroke-linecap="round" x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+        Source
+      </a>
+    </div>
+  </div>
+
+  <div class="h-px bg-[var(--color-border)]" />
+
+  {/* Comments */}
+  <div id="comments">
+    <CommentSection client:only="solid-js" stashId={scene.id} mediaType="scene" title={displayTitle} thumbnailUrl={scene.paths.screenshot ?? undefined} />
+  </div>
+
+  <BottomNav slot="nav" />
+</PageShell>
+
+<script is:inline define:vars={{ sceneId: id }}>
+  function startVideo() {
+    const v = document.getElementById("scene-video");
+    if (v instanceof HTMLVideoElement) v.play().catch(() => {});
+  }
+  document.addEventListener("astro:page-load", startVideo);
+
+  function resumeVideo() {
+    const key = `substash:video-time:${sceneId}`;
+    const saved = sessionStorage.getItem(key);
+    if (!saved) return;
+    sessionStorage.removeItem(key);
+    const video = document.querySelector("video");
+    if (!video) return;
+    const time = parseFloat(saved);
+    if (isNaN(time) || time <= 0) return;
+    if (video.readyState >= 1) {
+      video.currentTime = time;
+    } else {
+      video.addEventListener("loadedmetadata", () => { video.currentTime = time; }, { once: true });
+    }
+  }
+  document.addEventListener("astro:page-load", resumeVideo);
+</script>

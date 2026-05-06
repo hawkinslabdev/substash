@@ -1,0 +1,51 @@
+---
+interface Props {
+  src: string | null | undefined;
+  alt: string;
+  class?: string;
+  style?: string;
+  width?: number;
+  height?: number;
+}
+
+const { src, alt, class: cls = "", style, width, height } = Astro.props;
+
+const w = width ?? 400;
+const h = height ?? 225;
+const fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="#1e1e1e"/></svg>`;
+const fallback = `data:image/svg+xml,${encodeURIComponent(fallbackSvg)}`;
+---
+
+<img
+  src={src ?? fallback}
+  alt={alt}
+  width={width}
+  height={height}
+  loading="lazy"
+  decoding="async"
+  data-fallback={fallback}
+  class:list={["object-cover bg-[var(--color-surface-3)]", cls]}
+  style={style}
+/>
+
+<script>
+  // Document-level capture handles images added by ClientRouter SPA navigations.
+  // Runs once; no dedup needed since capture fires per-element per-error.
+  if (!(window as any).__blurHashErrBound) {
+    (window as any).__blurHashErrBound = true;
+    document.addEventListener(
+      "error",
+      (e) => {
+        const img = e.target;
+        if (
+          img instanceof HTMLImageElement &&
+          img.dataset.fallback &&
+          img.src !== img.dataset.fallback
+        ) {
+          img.src = img.dataset.fallback;
+        }
+      },
+      true, // capture phase: fires before load/error bubble up
+    );
+  }
+</script>

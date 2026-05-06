@@ -1,0 +1,54 @@
+---
+interface Props {
+  stashId: string;
+  mediaType: "scene" | "image";
+  title: string;
+}
+const { stashId, mediaType, title } = Astro.props;
+---
+
+<button
+  data-share-id={stashId}
+  data-share-type={mediaType}
+  data-share-title={title}
+  aria-label="Share"
+  class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] border border-[var(--color-border)] active:scale-95 transition-all"
+>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+    <polyline stroke-linecap="round" stroke-linejoin="round" points="16 6 12 2 8 6"/>
+    <line stroke-linecap="round" x1="12" y1="2" x2="12" y2="15"/>
+  </svg>
+  Share
+</button>
+
+<script>
+  import { getShareUrl } from "@/lib/utils/share";
+
+  function init() {
+    document.querySelectorAll<HTMLButtonElement>("[data-share-id]").forEach((btn) => {
+      // Avoid attaching duplicate listeners across Astro page transitions
+      if (btn.dataset.shareReady) return;
+      btn.dataset.shareReady = "1";
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.shareId!;
+        const type = btn.dataset.shareType as "scene" | "image";
+        const label = btn.dataset.shareTitle ?? "";
+        const originalPath = `/${type}s/${id}`;
+        const url = await getShareUrl(id, type, originalPath);
+        if (navigator.share) {
+          navigator.share({ title: label, url }).catch(() => {});
+        } else {
+          navigator.clipboard?.writeText(url).then(() => {
+            window.dispatchEvent(
+              new CustomEvent("substash:toast", { detail: { message: "Link copied", duration: 2500 } }),
+            );
+          });
+        }
+      });
+    });
+  }
+
+  init();
+  document.addEventListener("astro:page-load", init);
+</script>

@@ -1,0 +1,2 @@
+cd substash
+npm run format

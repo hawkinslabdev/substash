@@ -1,0 +1,55 @@
+---
+import BlurHash from "@/components/ui/BlurHash.astro";
+import { formatCount } from "@/lib/utils/format";
+import { proxyImage } from "@/lib/stash/image";
+import type { StashTag } from "@/lib/stash/types";
+
+interface Props {
+  tags: StashTag[];
+}
+const { tags } = Astro.props;
+---
+
+{tags.length === 0 && (
+  <div class="flex flex-col items-center justify-center min-h-[50dvh] gap-3 px-6 text-center">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-[var(--color-text-muted)]">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+      <line stroke-linecap="round" x1="7" y1="7" x2="7.01" y2="7"/>
+    </svg>
+    <div class="space-y-1">
+      <p class="text-sm font-semibold text-[var(--color-text)]">No tags yet</p>
+      <p class="text-xs text-[var(--color-text-muted)] max-w-[240px] leading-relaxed">
+        Tags appear here automatically as you organize your library in Stash.
+      </p>
+    </div>
+  </div>
+)}
+
+<ul class="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 md:grid-cols-4">
+  {
+    tags.map((tag) => (
+      <li>
+        <a
+          href={`/tags/${tag.id}`}
+          class="flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-surface-2)] border border-[var(--color-border)] active:scale-95 transition-transform"
+        >
+          <BlurHash
+            src={proxyImage(tag.image_path)}
+            alt={tag.name}
+            width={300}
+            height={120}
+            class="w-full h-[80px] object-cover"
+          />
+          <div class="p-2">
+            <p class="text-sm font-medium truncate">{tag.name}</p>
+            {(tag.scene_count != null || tag.image_count != null) && (
+              <p class="text-xs text-[var(--color-text-muted)]">
+                {formatCount((tag.scene_count ?? 0) + (tag.image_count ?? 0))} items
+              </p>
+            )}
+          </div>
+        </a>
+      </li>
+    ))
+  }
+</ul>

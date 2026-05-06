@@ -1,0 +1,106 @@
+---
+// Persistent full-width header — desktop only
+---
+
+<header class="top-header hidden lg:flex fixed top-0 left-0 right-0 z-50 items-center px-5 bg-[var(--color-surface-2)] border-b border-[var(--color-border)]">
+
+  <!-- Logo (left) -->
+  <a
+    href="/"
+    class="flex items-center gap-2.5 shrink-0 transition-opacity hover:opacity-80 active:opacity-60"
+  >
+    <img src="/logo.svg" alt="Substash" class="w-6 h-6" />
+    <span class="text-sm font-bold tracking-tight text-[var(--color-text)]">Substash</span>
+  </a>
+
+  <!-- Search form — absolutely centered, navigates only on submit with non-empty query -->
+  <form
+    id="header-search-form"
+    action="/search"
+    method="get"
+    class="absolute left-1/2 -translate-x-1/2 w-full max-w-[480px] px-4"
+    autocomplete="off"
+  >
+    <div class="relative flex items-center">
+      <svg
+        width="13"
+        height="13"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        class="absolute left-3.5 text-[var(--color-accent)] pointer-events-none shrink-0"
+      >
+        <circle cx="11" cy="11" r="8"/>
+        <path stroke-linecap="round" d="m21 21-4.35-4.35"/>
+      </svg>
+      <input
+        type="search"
+        name="q"
+        placeholder="Search Substash…"
+        class="w-full h-8 pl-9 pr-4 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-3)] text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]/50 transition-colors"
+      />
+    </div>
+  </form>
+
+  <!-- Right actions -->
+  <div class="flex items-center gap-1 ml-auto shrink-0">
+    <a
+      href="/?sort=date"
+      class="flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-semibold text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text)] transition-colors"
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
+      </svg>
+      Recent
+    </a>
+    <a
+      href="/?sort=random"
+      class="flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-semibold text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text)] transition-colors"
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+      </svg>
+      Random
+    </a>
+
+    <div class="w-px h-5 bg-[var(--color-border)] mx-1" aria-hidden="true"></div>
+
+    <a
+      href="/settings"
+      title="Settings"
+      class="flex items-center justify-center w-8 h-8 rounded-full text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text)] transition-colors"
+    >
+      <svg 
+        width="16" 
+        height="16" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        stroke-width="2" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"
+      >
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    </a>
+  </div>
+</header>
+
+<style>
+  .top-header {
+    height: var(--header-height);
+  }
+</style>
+
+<script>
+  function initSearch() {
+    document.getElementById('header-search-form')?.addEventListener('submit', (e) => {
+      const input = (e.currentTarget as HTMLFormElement).querySelector<HTMLInputElement>('input[name="q"]');
+      if (!input?.value.trim()) e.preventDefault();
+    });
+  }
+  initSearch();
+  document.addEventListener('astro:page-load', initSearch);
+</script>

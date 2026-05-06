@@ -1,0 +1,15 @@
+---
+interface Props {
+  class?: string;
+  rounded?: boolean;
+}
+const { class: cls = "", rounded = false } = Astro.props;
+---
+
+<div
+  class:list={[
+    "animate-pulse bg-[var(--color-surface-3)]",
+    rounded ? "rounded-full" : "rounded-md",
+    cls,
+  ]}
+/>

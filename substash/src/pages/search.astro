@@ -1,0 +1,124 @@
+---
+import PageShell from "@/components/layout/PageShell.astro";
+import BottomNav from "@/components/layout/BottomNav.astro";
+
+const q = Astro.url.searchParams.get("q")?.trim() ?? "";
+---
+
+<PageShell title={q ? `Search: ${q} — Substash` : "Substash: Search"}>
+  <!-- Mobile-only header (desktop uses TopHeader) -->
+  <header class="lg:hidden sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/95 backdrop-blur border-b border-[var(--color-border)] flex items-center gap-3">
+    <button onclick="history.back()" aria-label="Go back" class="text-[var(--color-text-muted)] shrink-0">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/>
+      </svg>
+    </button>
+    <!-- Mobile search input -->
+    <form action="/search" method="get" class="flex-1" autocomplete="off">
+      <div class="relative">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-accent)] pointer-events-none">
+          <circle cx="11" cy="11" r="8"/>
+          <path stroke-linecap="round" d="m21 21-4.35-4.35"/>
+        </svg>
+        <input
+          id="mobile-search-input"
+          type="search"
+          name="q"
+          value={q}
+          placeholder="Search Substash…"
+          class="w-full h-9 pl-9 pr-4 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-3)] text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]/50 transition-colors"
+        />
+      </div>
+    </form>
+  </header>
+
+  {q ? (
+    <!-- Query present: coming soon results placeholder -->
+    <div class="px-4 py-10 flex flex-col items-center gap-3 text-center">
+      <div class="w-12 h-12 rounded-full bg-[var(--color-surface-3)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-accent)]">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <circle cx="11" cy="11" r="8"/>
+          <path stroke-linecap="round" d="m21 21-4.35-4.35"/>
+        </svg>
+      </div>
+      <p class="text-sm font-semibold text-[var(--color-text)]">
+        Results for <span class="text-[var(--color-accent)]">"{q}"</span>
+      </p>
+      <p class="text-xs text-[var(--color-text-muted)] max-w-[260px] leading-relaxed">
+        Full-text search is coming soon. Browse by category below while you wait.
+      </p>
+    </div>
+  ) : (
+    <!-- No query: empty state -->
+    <div class="px-4 py-10 flex flex-col items-center gap-2 text-center">
+      <p class="text-sm font-semibold text-[var(--color-text)]">Search coming soon</p>
+      <p class="text-xs text-[var(--color-text-muted)] max-w-[240px] leading-relaxed">
+        Full-text search is on the way. Browse by category below.
+      </p>
+    </div>
+  )}
+
+  <!-- Browse shortcuts -->
+  <div class="px-4 pb-6">
+    <p class="text-[10px] font-bold tracking-widest text-[var(--color-text-muted)] uppercase mb-3">
+      Browse
+    </p>
+    <div class="flex flex-col gap-1">
+      {[
+        {
+          href: "/tags",
+          label: "Tags",
+          desc: "Browse all tags",
+          svg: `<path stroke-linecap="round" stroke-linejoin="round" d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line stroke-linecap="round" x1="7" y1="7" x2="7.01" y2="7"/>`,
+        },
+        {
+          href: "/performers",
+          label: "Stars",
+          desc: "Browse performers",
+          svg: `<path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>`,
+        },
+        {
+          href: "/studios",
+          label: "Studios",
+          desc: "Browse studios",
+          svg: `<rect x="2" y="3" width="20" height="14" rx="2"/><path stroke-linecap="round" d="M8 21h8M12 17v4"/>`,
+        },
+        {
+          href: "/discover",
+          label: "Discover",
+          desc: "Random picks",
+          svg: `<circle cx="12" cy="12" r="10"/><polygon stroke-linecap="round" stroke-linejoin="round" points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>`,
+        },
+      ].map(({ href, label, desc, svg }) => (
+        <a
+          href={href}
+          class="flex items-center gap-3.5 px-4 py-3 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:border-[var(--color-text-muted)]/30 hover:bg-[var(--color-surface-3)] active:scale-[0.98] transition-all"
+        >
+          <span class="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-surface-3)] text-[var(--color-accent)] shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" set:html={svg} />
+          </span>
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm font-medium text-[var(--color-text)]">{label}</span>
+            <span class="block text-xs text-[var(--color-text-muted)]">{desc}</span>
+          </span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-text-muted)] shrink-0">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/>
+          </svg>
+        </a>
+      ))}
+    </div>
+  </div>
+
+  <BottomNav slot="nav" />
+</PageShell>
+
+<script>
+  // Autofocus mobile input on page load
+  document.addEventListener('astro:page-load', () => {
+    if (location.pathname !== '/search') return;
+    if (window.innerWidth < 1024) {
+      document.getElementById('mobile-search-input')?.focus();
+    }
+  });
+</script>

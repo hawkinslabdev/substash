@@ -1,0 +1,18 @@
+services:
+  substash:
+    image: ghcr.io/hawkinslabdev/substash:latest
+    ports:
+      - "9456:9456"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Europe/Amsterdam
+      - PUBLIC_APP_URL=http://localhost:9456
+      - PUBLIC_APP_ORIGINS=http://localhost
+      - PUBLIC_AUTH_COOKIE_SECURE=false
+      - STASH_URL=http://stash:9999
+      - STASH_API_KEY=your_api_key_here
+      - STASH_TAGS_EXCLUDED=flowers,landscape
+      - SHARE_SECRET=your_share_secret_here
+      - DB_PATH=/app/data/substash.db
+    restart: unless-stopped

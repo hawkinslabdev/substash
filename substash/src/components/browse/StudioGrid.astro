@@ -1,0 +1,53 @@
+---
+import BlurHash from "@/components/ui/BlurHash.astro";
+import { formatCount } from "@/lib/utils/format";
+import { proxyImage } from "@/lib/stash/image";
+import type { StashStudio } from "@/lib/stash/types";
+
+interface Props {
+  studios: StashStudio[];
+}
+const { studios } = Astro.props;
+---
+
+{studios.length === 0 && (
+  <div class="flex flex-col items-center justify-center min-h-[50dvh] gap-3 px-6 text-center">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-[var(--color-text-muted)]">
+      <rect x="2" y="3" width="20" height="14" rx="2"/>
+      <path stroke-linecap="round" d="M8 21h8M12 17v4"/>
+    </svg>
+    <div class="space-y-1">
+      <p class="text-sm font-semibold text-[var(--color-text)]">No studios yet</p>
+      <p class="text-xs text-[var(--color-text-muted)] max-w-[240px] leading-relaxed">
+        Add studios in Stash and they'll appear here automatically.
+      </p>
+    </div>
+  </div>
+)}
+
+<ul class="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 md:grid-cols-4">
+  {
+    studios.map((studio) => (
+      <li>
+        <a
+          href={`/studios/${studio.id}`}
+          class="flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-surface-2)] border border-[var(--color-border)] active:scale-95 transition-transform"
+        >
+          <BlurHash
+            src={proxyImage(studio.image_path)}
+            alt={studio.name}
+            width={300}
+            height={120}
+            class="w-full h-[80px] object-cover"
+          />
+          <div class="p-2">
+            <p class="text-sm font-medium truncate">{studio.name}</p>
+            {studio.scene_count != null && (
+              <p class="text-xs text-[var(--color-text-muted)]">{formatCount(studio.scene_count)} scenes</p>
+            )}
+          </div>
+        </a>
+      </li>
+    ))
+  }
+</ul>

@@ -1,0 +1,124 @@
+---
+import "@/styles/global.css";
+import { ClientRouter } from "astro:transitions";
+import Toast from "@/components/ui/Toast.solid";
+import TopHeader from "@/components/layout/TopHeader.astro";
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Preload the next video/image for sub-pages */
+  preloadUrl?: string;
+  preloadAs?: "video" | "image";
+}
+
+const {
+  title = "Substash",
+  description = "Your personal media feed",
+  preloadUrl,
+  preloadAs,
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d0d0d" />
+    <meta name="description" content={description} />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>{title}</title>
+    {preloadUrl && <link rel="preload" href={preloadUrl} as={preloadAs ?? "video"} />}
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preconnect" href="https://rsms.me" crossorigin />
+    <link rel="preload" href="https://rsms.me/inter/inter.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://rsms.me/inter/inter.css" /></noscript>
+    <ClientRouter />
+    <!-- Anti-flash: sidebar collapse state + take over scroll restoration -->
+    <script is:inline>
+      (function () {
+        // Sidebar collapse
+        if (localStorage.getItem('substash:sidebar') === 'collapsed') {
+          document.documentElement.style.setProperty('--sidebar-width-desktop', '64px');
+          document.documentElement.setAttribute('data-sidebar-collapsed', '');
+        }
+        // Hand scroll restoration to our own code so Astro doesn't race us
+        history.scrollRestoration = 'manual';
+      })();
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js');
+      }
+    </script>
+    <script>
+      // ── Scroll position restoration for back navigation ──
+      //
+      // Astro's ClientRouter re-renders client:only islands asynchronously,
+      // so the page isn't tall enough for browser scroll restoration by the
+      // time it runs. We save scroll on departure and restore once the page
+      // has grown enough to accommodate the target position.
+
+      const SCROLL_KEY = (url: string) => `substash:scroll:${url}`;
+      let pendingRestore: number | null = null;
+
+      document.addEventListener('astro:before-preparation', (e) => {
+        // Drop all <link rel="preload"> so in-flight fetches don't trigger
+        // "preloaded resource not used" warnings on the incoming page.
+        document.querySelectorAll('link[rel="preload"]').forEach((l) => l.remove());
+
+        // Save current scroll position for the page we're leaving
+        if (window.scrollY > 0) {
+          sessionStorage.setItem(SCROLL_KEY(location.href), String(window.scrollY));
+        }
+        // Only restore on back/forward traversal, not on fresh link clicks
+        pendingRestore =
+          (e as TransitionBeforePreparationEvent).navigationType === 'traverse'
+            ? (parseInt(sessionStorage.getItem(SCROLL_KEY((e as TransitionBeforePreparationEvent).to.href) ?? '') ?? '0', 10) || null)
+            : null;
+      });
+
+      document.addEventListener('astro:page-load', () => {
+        const targetY = pendingRestore;
+        pendingRestore = null;
+        if (!targetY) return;
+
+        function tryScroll(): boolean {
+          if (document.documentElement.scrollHeight >= targetY + window.innerHeight * 0.5) {
+            window.scrollTo({ top: targetY, behavior: 'instant' });
+            return true;
+          }
+          return false;
+        }
+
+        // Attempt immediately — may already be tall enough (cached TanStack data)
+        if (tryScroll()) return;
+
+        // Otherwise wait for the island to hydrate and render content
+        const ro = new ResizeObserver(() => {
+          if (tryScroll()) ro.disconnect();
+        });
+        ro.observe(document.body);
+
+        // Hard timeout: give up after 1.5 s and scroll to whatever we can
+        setTimeout(() => {
+          ro.disconnect();
+          window.scrollTo({ top: targetY, behavior: 'instant' });
+        }, 1500);
+      });
+    </script>
+  </head>
+  <body>
+    <TopHeader />
+    <main transition:animate="fade">
+      <div class="lg:max-w-[720px] lg:mx-auto">
+        <slot />
+      </div>
+    </main>
+    <slot name="nav" />
+    <Toast client:load />
+  </body>
+</html>

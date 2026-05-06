@@ -1,0 +1,216 @@
+---
+import PageShell from "@/components/layout/PageShell.astro";
+import BottomNav from "@/components/layout/BottomNav.astro";
+import BlurHash from "@/components/ui/BlurHash.astro";
+import VoteButton from "@/components/post/VoteButton.solid";
+import ShareButton from "@/components/post/ShareButton.astro";
+import CommentSection from "@/components/post/CommentSection.solid";
+import { stashRequest } from "@/lib/stash/client";
+import { FIND_IMAGE } from "@/lib/stash/queries";
+import { proxyImage } from "@/lib/stash/image";
+import type { FindImageQuery } from "@/lib/stash/types";
+import { resolveTitle, formatOriginDisplay } from "@/lib/utils/subreddit";
+import { filterTagList, filterByTags } from "@/lib/stash/filter";
+import { timeAgo } from "@/lib/utils/markdown";
+import { DEMO_MODE } from "astro:env/server";
+import { getDemoImage } from "@/lib/demo";
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/");
+Astro.response.headers.set("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+
+let image: FindImageQuery["findImage"] = null;
+if (DEMO_MODE) {
+  image = getDemoImage(id) ?? null;
+  if (!image) return Astro.redirect("/");
+} else {
+  try {
+    const data = await stashRequest<FindImageQuery>(FIND_IMAGE, { id });
+    image = data.findImage;
+  } catch {
+    return Astro.redirect("/");
+  }
+  if (!image) return Astro.redirect("/");
+}
+
+// Block if image has any excluded tag
+const [visibleImage] = filterByTags([{ ...image, tags: image.tags ?? [] }]);
+if (!visibleImage) return Astro.redirect("/404");
+
+const fileSource = image.files?.[0] ?? image.visual_files?.[0];
+const sub = resolveTitle(image.title, fileSource?.path, fileSource?.basename, {
+  studio: image.studio?.name ?? null,
+  performers: (image.performers ?? []).map((p) => p.name),
+  tags: (image.tags ?? []).map((t) => t.name),
+  date: image.date || image.created_at?.substring(0, 10) || null,
+  rating: image.rating100 ?? null,
+});
+const displayTitle = sub.cleanTitle || "Untitled";
+const originDisplay = formatOriginDisplay(sub.origin, sub.displayName);
+const creditLine = sub.credit;
+const dayDisplay = sub.day;
+
+const file = image.files[0];
+const mediaAspect = file ? `${file.width} / ${file.height}` : "1 / 1";
+const imgSrc = proxyImage(image.paths.preview || image.paths.thumbnail);
+---
+
+
+<PageShell title={`Substash: ${displayTitle}`}>
+  <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)] border-b border-[var(--color-border)] flex items-center gap-3">
+    <button onclick="history.back()" aria-label="Go back" class="text-[var(--color-text-muted)]">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
+      </svg>
+    </button>
+    <p class="text-sm font-medium truncate">{displayTitle}</p>
+  </header>
+
+  {/* Image / GIF (video) */}
+  <div class="relative w-full bg-black overflow-hidden" style={`aspect-ratio: ${mediaAspect}`}>
+    {/* Blurred background to fill pillarbox/letterbox */}
+    {proxyImage(image.paths.thumbnail) && (
+      <img
+        src={proxyImage(image.paths.thumbnail)}
+        alt=""
+        class="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-60"
+        aria-hidden="true"
+        loading="lazy"
+        decoding="async"
+      />
+    )}
+    {imgSrc && image.paths.preview ? (
+      <video
+        id="scene-video"
+        src={imgSrc}
+        poster={proxyImage(image.paths.thumbnail)!}
+        class="relative w-full h-full object-contain"
+        loop
+        muted
+        playsinline
+        autoplay
+        controls
+        preload="metadata"
+      />
+    ) : (
+      <img
+        src={proxyImage(image.paths.thumbnail)!}
+        alt={displayTitle}
+        class="relative w-full h-full object-contain"
+        loading="lazy"
+        decoding="async"
+      />
+    )}
+  </div>
+
+  {/* Meta */}
+  <div class="px-4 py-4 space-y-3">
+    {/* Performers */}
+    {image.performers.length > 0 && (
+      <div class="flex flex-wrap gap-2">
+        {image.performers.map((p) => (
+          <a
+            href={`/performers/${p.id}`}
+            class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[var(--color-surface-3)] border border-[var(--color-border)] text-sm hover:border-[var(--color-accent)] transition-colors"
+          >
+            <BlurHash src={proxyImage(p.image_path)} alt={p.name} width={28} height={28} class="w-7 h-7 rounded-full" />
+            {p.name}
+          </a>
+        ))}
+      </div>
+    )}
+
+    <div class="flex flex-col gap-0.5">
+      <a
+        href={`#`}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center text-xs font-medium text-[var(--color-accent)] hover:opacity-75 transition-opacity"
+      >
+        {originDisplay}
+      </a>
+      {creditLine && (
+        <p class="text-xs text-[var(--color-text-muted)]">{creditLine}</p>
+      )}
+    </div>
+
+    <h1 class="text-base font-semibold leading-snug">{displayTitle}</h1>
+
+    <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--color-text-muted)]">
+      {image.studio && (
+        <a href={`/studios/${image.studio.id}`} class="hover:text-[var(--color-text)]">
+          {image.studio.name}
+        </a>
+      )}
+      {(image.date || image.created_at) && (
+        <time datetime={image.date ?? image.created_at?.substring(0, 10)}>
+            {dayDisplay ?? timeAgo(new Date(image.date ? image.date + "T00:00:00" : image.created_at!))}
+          </time>
+      )}
+    </div>
+
+    {/* Tags */}
+    {image.tags.length > 0 && (
+      <div class="flex flex-wrap gap-1.5">
+        {image.tags.map((t) => (
+          <a
+            href={`/tags/${t.id}`}
+            class="px-2 py-0.5 rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)] text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+          >
+            {t.name}
+          </a>
+        ))}
+      </div>
+    )}
+
+    {/* Details */}
+    {image.details && (
+      <p class="text-sm text-[var(--color-text-muted)] leading-relaxed">{image.details}</p>
+    )}
+
+    {/* Actions */}
+    <div class="flex items-center gap-2 pt-1">
+      <VoteButton
+        client:visible
+        imageId={image.id}
+        initialCount={image.o_counter ?? 0}
+        type="o_counter"
+        label="Like"
+        title={displayTitle}
+        thumbnailUrl={image.paths.thumbnail ?? undefined}
+      />
+      <ShareButton stashId={id} mediaType="image" title={displayTitle} />
+      <a
+        href={`/api/stash/open?type=image&id=${id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] border border-[var(--color-border)] active:scale-95 transition-all hover:text-[var(--color-text)] min-h-[44px]"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline stroke-linecap="round" stroke-linejoin="round" points="15 3 21 3 21 9"/>
+          <line stroke-linecap="round" x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+        Source
+      </a>
+    </div>
+  </div>
+
+  <div class="h-px bg-[var(--color-border)]" />
+
+  {/* Comments */}
+  <div id="comments">
+    <CommentSection client:only="solid-js" stashId={image.id} mediaType="image" title={displayTitle} thumbnailUrl={image.paths.thumbnail ?? undefined} />
+  </div>
+
+  <BottomNav slot="nav" />
+</PageShell>
+
+<script is:inline>
+  function startVideo() {
+    const v = document.getElementById("scene-video");
+    if (v instanceof HTMLVideoElement) v.play().catch(() => {});
+  }
+  startVideo();
+  document.addEventListener("astro:page-load", startVideo);
+</script>

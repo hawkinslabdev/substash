@@ -1,0 +1,115 @@
+---
+import PageShell from "@/components/layout/PageShell.astro";
+import BottomNav from "@/components/layout/BottomNav.astro";
+import FeedContainer from "@/components/feed/FeedContainer.astro";
+import StashOffline from "@/components/ui/StashOffline.astro";
+import SortBar from "@/components/ui/SortBar.astro";
+import { stashRequest } from "@/lib/stash/client";
+import { FIND_STUDIO, FIND_SCENES, FIND_IMAGES } from "@/lib/stash/queries";
+import { encodeCursor, nextCursor } from "@/lib/utils/cursor";
+import { sceneToFeedItem, imageToFeedItem } from "@/lib/stash/feed-item";
+import type { FindStudioQuery, FindScenesQuery, FindImagesQuery } from "@/lib/stash/types";
+import { filterByTags } from "@/lib/stash/filter";
+import { DEMO_MODE } from "astro:env/server";
+import { demoItemsFiltered, getDemoStudio } from "@/lib/demo";
+
+const { slug } = Astro.params;
+Astro.response.headers.set("Cache-Control", "public, max-age=60, stale-while-revalidate=600");
+const TYPES_PER_PAGE = 10;
+
+const ALLOWED_SORTS = ["date", "rating", "random"] as const;
+type Sort = (typeof ALLOWED_SORTS)[number];
+
+const rawSort = Astro.url.searchParams.get("sort") ?? "date";
+const sort: Sort = (ALLOWED_SORTS as readonly string[]).includes(rawSort)
+  ? (rawSort as Sort)
+  : "date";
+
+const sceneSort = sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : sort;
+const imageSort = sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : sort;
+
+let items: import("@/lib/stash/feed-item").FeedItem[] = [];
+let count = 0;
+let offline = false;
+let studio: FindStudioQuery["findStudio"] = null;
+
+if (DEMO_MODE) {
+  studio = getDemoStudio(slug!);
+  if (studio) {
+    const demo = demoItemsFiltered({ studioId: slug!, sort });
+    items = demo.items;
+    count = demo.count;
+  }
+} else try {
+  const [studioData, scenesData, imagesData] = await Promise.all([
+    stashRequest<FindStudioQuery>(FIND_STUDIO, { id: slug }),
+    stashRequest<FindScenesQuery>(FIND_SCENES, {
+      filter: {
+        page: 1,
+        per_page: TYPES_PER_PAGE,
+        sort: sceneSort,
+        direction: sort !== "random" ? "DESC" : undefined,
+      },
+      scene_filter: { studios: { value: [slug!], modifier: "INCLUDES" } },
+    }),
+    stashRequest<FindImagesQuery>(FIND_IMAGES, {
+      filter: {
+        page: 1,
+        per_page: TYPES_PER_PAGE,
+        sort: imageSort,
+        direction: sort !== "random" ? "DESC" : undefined,
+      },
+      image_filter: { studios: { value: [slug!], modifier: "INCLUDES" } },
+    }).catch((e) => { console.error("[studio] images fetch failed:", e); return { findImages: { count: 0, images: [] } }; }),
+  ]);
+  studio = studioData.findStudio;
+
+  const filteredScenes = filterByTags(scenesData.findScenes.scenes);
+  const filteredImages = filterByTags(imagesData.findImages.images);
+
+  const scenes = filteredScenes.map(sceneToFeedItem);
+  const images = filteredImages.map(imageToFeedItem);
+
+  const interleaved: typeof items = [];
+  const maxLen = Math.max(scenes.length, images.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < scenes.length) interleaved.push(scenes[i]);
+    if (i < images.length) interleaved.push(images[i]);
+  }
+
+  items = interleaved;
+  count = scenesData.findScenes.count + imagesData.findImages.count;
+} catch {
+  offline = true;
+}
+
+const displayName = studio?.name ?? slug;
+const cursorPayload = { page: 1, perPage: 20, total: count, sort, studioId: slug };
+---
+
+<PageShell title={`Substash: ${displayName}`}>
+  <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)] flex items-center gap-3">
+    <a href="/studios" class="text-[var(--color-text-muted)]">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
+      </svg>
+    </a>
+    <h1 class="text-base font-semibold truncate">{displayName}</h1>
+    <span class="ml-auto text-xs text-[var(--color-text-muted)] shrink-0">{count}</span>
+  </header>
+
+  <SortBar sort={sort} baseUrl={`/studios/${slug}`} />
+
+  {offline ? <StashOffline /> : (
+    <FeedContainer
+      initialItems={items}
+      initialCursor={encodeCursor(cursorPayload)}
+      initialNextCursor={nextCursor(cursorPayload)}
+      initialTotal={count}
+      sort={sort}
+      studioId={slug}
+    />
+  )}
+
+  <BottomNav slot="nav" />
+</PageShell>

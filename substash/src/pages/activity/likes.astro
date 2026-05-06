@@ -1,0 +1,113 @@
+---
+import PageShell from "@/components/layout/PageShell.astro";
+import BottomNav from "@/components/layout/BottomNav.astro";
+import { db } from "@/lib/db";
+import { likes, type Like } from "@/lib/db/schema";
+import { desc, eq } from "drizzle-orm";
+import { proxyImage } from "@/lib/stash/image";
+import { stashRequest } from "@/lib/stash/client";
+import { timeAgo } from "@/lib/utils/markdown";
+
+function stillThumb(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.includes("/preview") || /\.(mp4|webm|mov)(\?|$)/i.test(url)) return null;
+  return url;
+}
+
+const query = () => db.select().from(likes).orderBy(desc(likes.createdAt)).limit(50).all();
+let rows: Like[] = query();
+
+// Backfill any likes recorded without title/thumbnail (pre-fix entries)
+const needsFill = rows.filter((r) => !r.title || !stillThumb(r.thumbnailUrl));
+if (needsFill.length > 0) {
+  await Promise.all(
+    needsFill.map(async (row) => {
+      try {
+        if (row.mediaType === "image") {
+          const d = await stashRequest<{ findImage: { title: string | null; paths: { thumbnail: string | null } } }>(
+            `query($id:ID!){ findImage(id:$id){ title paths{ thumbnail } } }`,
+            { id: row.stashId },
+          );
+          db.update(likes)
+            .set({ title: d.findImage?.title ?? null, thumbnailUrl: d.findImage?.paths.thumbnail ?? null })
+            .where(eq(likes.stashId, row.stashId))
+            .run();
+        } else {
+          const d = await stashRequest<{ findScene: { title: string | null; paths: { screenshot: string | null } } }>(
+            `query($id:ID!){ findScene(id:$id){ title paths{ screenshot } } }`,
+            { id: row.stashId },
+          );
+          db.update(likes)
+            .set({ title: d.findScene?.title ?? null, thumbnailUrl: d.findScene?.paths.screenshot ?? null })
+            .where(eq(likes.stashId, row.stashId))
+            .run();
+        }
+      } catch { /* skip */ }
+    }),
+  );
+  rows = query();
+}
+---
+
+<PageShell title="Substash: Recent Likes">
+  <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)] flex items-center gap-3">
+    <button onclick="history.back()" aria-label="Go back" class="text-[var(--color-text-muted)]">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
+      </svg>
+    </button>
+    <p class="text-sm font-medium">Recent Likes</p>
+  </header>
+
+  {rows.length === 0 ? (
+    <div class="flex flex-col items-center justify-center min-h-[50dvh] gap-3 px-6 text-center">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-[var(--color-text-muted)]">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+      <div class="space-y-1">
+        <p class="text-sm font-semibold text-[var(--color-text)]">No likes yet</p>
+        <p class="text-xs text-[var(--color-text-muted)] max-w-[240px] leading-relaxed">
+          Like something you've discovered and it'll appear here.
+        </p>
+      </div>
+    </div>
+  ) : (
+    <ul class="divide-y divide-[var(--color-border)]">
+      {rows.map((like) => {
+        const href = `/${like.mediaType}s/${like.stashId}`;
+        const thumb = proxyImage(stillThumb(like.thumbnailUrl));
+        const date = new Date(like.createdAt);
+        return (
+          <li>
+            <a href={href} class="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-surface-2)] transition-colors">
+              {thumb ? (
+                <img
+                  src={thumb}
+                  alt=""
+                  width="56"
+                  height="56"
+                  class="w-14 h-14 rounded-lg object-cover shrink-0 bg-[var(--color-surface-3)]"
+                  loading="lazy"
+                />
+              ) : (
+                <div class="w-14 h-14 rounded-lg bg-[var(--color-surface-3)] shrink-0 flex items-center justify-center">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-[var(--color-text-muted)]">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                </div>
+              )}
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-medium text-[var(--color-accent)] truncate mb-0.5">{like.title ?? "Untitled"}</p>
+                <time class="text-xs text-[var(--color-text-muted)] block" datetime={date.toISOString()} title={date.toLocaleString()}>
+                  {timeAgo(date)}
+                </time>
+              </div>
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  )}
+
+  <BottomNav slot="nav" />
+</PageShell>

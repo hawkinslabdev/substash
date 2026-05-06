@@ -1,0 +1,28 @@
+---
+import BlurHash from "@/components/ui/BlurHash.astro";
+import { proxyImage } from "@/lib/stash/image";
+import type { StashImage } from "@/lib/stash/types";
+
+interface Props {
+  images: StashImage[];
+}
+const { images } = Astro.props;
+---
+
+<ul class="grid grid-cols-3 gap-0.5 sm:grid-cols-4 md:grid-cols-5">
+  {
+    images.map((image) => (
+      <li>
+        <a href={`/images/${image.id}`} class="block aspect-square overflow-hidden active:opacity-80 transition-opacity">
+          <BlurHash
+            src={proxyImage(image.paths.thumbnail ?? image.paths.preview)}
+            alt={image.title ?? "Photo"}
+            width={240}
+            height={240}
+            class="w-full h-full object-cover"
+          />
+        </a>
+      </li>
+    ))
+  }
+</ul>

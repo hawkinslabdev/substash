@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1777629070037,
+      "tag": "0000_chief_tomorrow_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1777876163567,
+      "tag": "0001_daily_pete_wisdom",
+      "breakpoints": true
+    }
+  ]
+}

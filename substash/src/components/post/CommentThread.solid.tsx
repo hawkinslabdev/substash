@@ -1,0 +1,114 @@
+import { createSignal, For, Show } from "solid-js";
+import CommentForm from "./CommentForm.solid";
+import { renderMarkdown, timeAgo } from "@/lib/utils/markdown";
+import { sanitize } from "@/lib/utils/sanitize";
+import type { Comment } from "@/lib/db/schema";
+
+function renderBody(body: string): string {
+  // WYSIWYG editor stores HTML (starts with a block tag); old comments are plain text / markdown
+  return body.trimStart().startsWith("<")
+    ? sanitize(body)
+    : renderMarkdown(body);
+}
+
+interface Props {
+  comments: Comment[];
+  stashId: string;
+  mediaType: "scene" | "image";
+  title?: string;
+  thumbnailUrl?: string;
+  onRefetch?: () => void;
+  parentId?: string | null;
+  depth?: number;
+}
+
+export default function CommentThread(props: Props) {
+  const [replyingTo, setReplyingTo] = createSignal<string | null>(null);
+
+  const children = () =>
+    props.comments.filter(
+      (c) => (c.parentId ?? null) === (props.parentId ?? null),
+    );
+
+  return (
+    <ul
+      class={
+        props.depth
+          ? "ml-4 border-l border-[var(--color-border)] pl-3"
+          : "space-y-3"
+      }
+    >
+      <For each={children()}>
+        {(comment) => {
+          const date = new Date(comment.createdAt);
+          const fullDate = date.toLocaleString(undefined, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          });
+
+          return (
+            <li class="space-y-1">
+              <div class="rounded-lg bg-[var(--color-surface-3)] p-3 text-sm">
+                <div
+                  class="md-body text-[var(--color-text)] leading-relaxed"
+                  innerHTML={renderBody(comment.body)}
+                />
+                <div class="mt-2 flex items-center gap-3">
+                  <time
+                    class="text-[10px] text-[var(--color-text-muted)]"
+                    dateTime={date.toISOString()}
+                    title={fullDate}
+                  >
+                    {timeAgo(date)}
+                  </time>
+                  <button
+                    onClick={() =>
+                      setReplyingTo(
+                        replyingTo() === comment.id ? null : comment.id,
+                      )
+                    }
+                    class="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors min-h-0 min-w-0 h-auto"
+                  >
+                    {replyingTo() === comment.id ? "Cancel" : "Reply"}
+                  </button>
+                </div>
+              </div>
+
+              <Show when={replyingTo() === comment.id}>
+                <div class="ml-4">
+                  <CommentForm
+                    stashId={props.stashId}
+                    mediaType={props.mediaType}
+                    parentId={comment.id}
+                    title={props.title}
+                    thumbnailUrl={props.thumbnailUrl}
+                    placeholder="Write a reply…"
+                    onPosted={() => {
+                      setReplyingTo(null);
+                      props.onRefetch?.();
+                    }}
+                  />
+                </div>
+              </Show>
+
+              <Show
+                when={props.comments.some((c) => c.parentId === comment.id)}
+              >
+                <CommentThread
+                  comments={props.comments}
+                  stashId={props.stashId}
+                  mediaType={props.mediaType}
+                  title={props.title}
+                  thumbnailUrl={props.thumbnailUrl}
+                  onRefetch={props.onRefetch}
+                  parentId={comment.id}
+                  depth={(props.depth ?? 0) + 1}
+                />
+              </Show>
+            </li>
+          );
+        }}
+      </For>
+    </ul>
+  );
+}

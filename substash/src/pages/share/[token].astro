@@ -1,0 +1,19 @@
+---
+import { db } from "@/lib/db";
+import { shareLinks } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { hmacSha256hex } from "@/lib/utils/crypto";
+import { timingSafeEqual } from "@/lib/utils/crypto";
+
+const { token } = Astro.params;
+const row = token ? db.select().from(shareLinks).where(eq(shareLinks.token, token)).get() : null;
+
+if (!row) return Astro.redirect("/");
+
+const shareSecret = import.meta.env.SHARE_SECRET ?? "substash-default-secret";
+const expected = await hmacSha256hex(`${row.stashId}${row.mediaType}`, shareSecret);
+
+if (!timingSafeEqual(expected, row.hmac)) return Astro.redirect("/");
+
+return Astro.redirect(`${row.originalPath}?shareKey=${token}`, 302);
+---

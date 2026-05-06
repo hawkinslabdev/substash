@@ -1,0 +1,166 @@
+---
+const from = Astro.url.searchParams.get("from") ?? "/";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d0d0d" />
+    <title>Substash: Unlock</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        min-height: 100dvh;
+        background: #0d0d0d;
+        color: #e8e8e8;
+        font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        width: 100%;
+        max-width: 360px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 28px;
+      }
+      .logo {
+        width: 48px;
+        height: 48px;
+        background: #ff4500;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      h1 { font-size: 1.125rem; font-weight: 600; }
+      p.sub { font-size: 0.8125rem; color: #888; text-align: center; }
+      .boxes {
+        display: flex;
+        gap: 10px;
+      }
+      .box {
+        width: 44px;
+        height: 52px;
+        background: #1e1e1e;
+        border: 1.5px solid #2a2a2a;
+        border-radius: 8px;
+        font-size: 1.25rem;
+        font-weight: 600;
+        text-align: center;
+        color: #e8e8e8;
+        caret-color: #ff4500;
+        outline: none;
+        transition: border-color 0.15s;
+        text-transform: uppercase;
+      }
+      .box:focus { border-color: #ff4500; }
+      .btn {
+        width: 100%;
+        height: 48px;
+        background: #ff4500;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s, opacity 0.15s;
+      }
+      .btn:hover { background: #ff6534; }
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .error {
+        font-size: 0.8125rem;
+        color: #ff4500;
+        text-align: center;
+        min-height: 1.2em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="logo">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <div style="text-align:center;display:flex;flex-direction:column;gap:6px">
+        <h1>Enter PIN</h1>
+        <p class="sub">Enter your 6-character PIN to unlock Substash.</p>
+      </div>
+      <div class="boxes" id="boxes">
+        <input class="box" type="text" maxlength="1" inputmode="text" autocomplete="off" data-index="0" />
+        <input class="box" type="text" maxlength="1" inputmode="text" autocomplete="off" data-index="1" />
+        <input class="box" type="text" maxlength="1" inputmode="text" autocomplete="off" data-index="2" />
+        <input class="box" type="text" maxlength="1" inputmode="text" autocomplete="off" data-index="3" />
+        <input class="box" type="text" maxlength="1" inputmode="text" autocomplete="off" data-index="4" />
+        <input class="box" type="text" maxlength="1" inputmode="text" autocomplete="off" data-index="5" />
+      </div>
+      <p class="error" id="error" aria-live="polite"></p>
+      <button class="btn" id="btn" type="button">Unlock</button>
+    </div>
+
+    <script is:inline define:vars={{ from }}>
+      const boxes = Array.from(document.querySelectorAll('.box'));
+      const btn = document.getElementById('btn');
+      const err = document.getElementById('error');
+
+      boxes[0].focus();
+
+      boxes.forEach((box, i) => {
+        box.addEventListener('input', (e) => {
+          const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(-1);
+          e.target.value = val;
+          if (val && i < 5) boxes[i + 1].focus();
+          if (i === 5 && val) attempt();
+        });
+        box.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' && !e.target.value && i > 0) {
+            boxes[i - 1].focus();
+            boxes[i - 1].value = '';
+          }
+        });
+        box.addEventListener('paste', (e) => {
+          e.preventDefault();
+          const text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6);
+          text.split('').forEach((ch, j) => { if (boxes[j]) boxes[j].value = ch; });
+          if (text.length === 6) attempt();
+        });
+      });
+
+      btn.addEventListener('click', attempt);
+
+      async function attempt() {
+        const pin = boxes.map(b => b.value).join('');
+        if (pin.length < 6) { err.textContent = 'Enter all 6 characters.'; return; }
+        btn.disabled = true;
+        err.textContent = '';
+        try {
+          const res = await fetch('/api/auth/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            err.textContent = data.error || 'Incorrect PIN.';
+            boxes.forEach(b => b.value = '');
+            boxes[0].focus();
+            btn.disabled = false;
+            return;
+          }
+          window.location.href = from;
+        } catch {
+          err.textContent = 'Network error. Try again.';
+          btn.disabled = false;
+        }
+      }
+    </script>
+  </body>
+</html>

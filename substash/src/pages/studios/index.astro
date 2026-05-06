@@ -1,0 +1,41 @@
+---
+import PageShell from "@/components/layout/PageShell.astro";
+import BottomNav from "@/components/layout/BottomNav.astro";
+import StudioGrid from "@/components/browse/StudioGrid.astro";
+import StashOffline from "@/components/ui/StashOffline.astro";
+import { stashRequest } from "@/lib/stash/client";
+import { FIND_STUDIOS } from "@/lib/stash/queries";
+import type { FindStudiosQuery } from "@/lib/stash/types";
+import { DEMO_MODE } from "astro:env/server";
+import { DEMO_STUDIOS } from "@/lib/demo";
+
+Astro.response.headers.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+
+let studios: FindStudiosQuery["findStudios"]["studios"] = [];
+let offline = false;
+
+if (DEMO_MODE) {
+  studios = DEMO_STUDIOS;
+} else try {
+  const data = await stashRequest<FindStudiosQuery>(FIND_STUDIOS, {
+    filter: { page: 1, per_page: 100, sort: "name" },
+  });
+  studios = data.findStudios.studios;
+} catch (err) {
+  console.error("[browse] stashRequest failed:", err instanceof Error ? err.message : err);
+  offline = true;
+}
+---
+
+<PageShell title="Substash: Studios">
+  <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)]">
+    <h1 class="text-base font-semibold">
+      <img 
+        src="/logo.svg" alt="Substash logo" class="inline w-5 h-5 mr-1 -mt-0.5" 
+        />
+      Studios
+    </h1>
+  </header>
+  {offline ? <StashOffline /> : <StudioGrid studios={studios} />}
+  <BottomNav slot="nav" />
+</PageShell>

@@ -1,0 +1,39 @@
+---
+import PageShell from "@/components/layout/PageShell.astro";
+import BottomNav from "@/components/layout/BottomNav.astro";
+import Settings from "@/components/settings/Settings.solid";
+import { db } from "@/lib/db";
+import { settings } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { DEFAULT_TITLE_EXPR } from "@/lib/utils/media-title";
+
+function getSetting(key: string): string | null {
+  return db.select().from(settings).where(eq(settings.key, key)).get()?.value ?? null;
+}
+
+const pinEnabled = getSetting("pin_enabled") === "true";
+const sessionHours = parseInt(getSetting("session_hours") ?? "0", 10);
+const shareEnabled = getSetting("share_enabled") === "true";
+const mediaTitleExpr = getSetting("media_title_expr") ?? DEFAULT_TITLE_EXPR;
+---
+
+<PageShell title="Substash: Settings">
+  <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)] flex items-center gap-3">
+    <button onclick="history.back()" aria-label="Go back" class="text-[var(--color-text-muted)]">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
+      </svg>
+    </button>
+    <p class="text-sm font-medium">Settings</p>
+  </header>
+
+  <Settings
+    client:only="solid-js"
+    pinEnabled={pinEnabled}
+    sessionHours={sessionHours}
+    shareEnabled={shareEnabled}
+    mediaTitleExpr={mediaTitleExpr}
+  />
+
+  <BottomNav slot="nav" />
+</PageShell>

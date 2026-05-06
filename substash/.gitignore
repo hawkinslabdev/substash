@@ -1,0 +1,10 @@
+.env
+.env.local
+*.db
+*.db*
+*.log
+node_modules/
+dist/
+build/
+coverage/
+!.husky/

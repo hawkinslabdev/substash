@@ -1,0 +1,40 @@
+---
+import Feed from "./Feed.solid";
+import type { FeedItem } from "@/lib/stash/feed-item";
+
+interface Props {
+  initialItems: FeedItem[];
+  initialCursor: string;
+  initialNextCursor: string | null;
+  initialTotal: number;
+  sort?: string;
+  tagId?: string;
+  studioId?: string;
+  performerId?: string;
+}
+
+const {
+  initialItems,
+  initialCursor,
+  initialNextCursor,
+  initialTotal,
+  sort,
+  tagId,
+  studioId,
+  performerId,
+} = Astro.props;
+---
+
+<Feed
+  client:only="solid-js"
+  sort={sort}
+  tagId={tagId}
+  studioId={studioId}
+  performerId={performerId}
+  initialData={{
+    items: initialItems,
+    cursor: initialCursor,
+    nextCursor: initialNextCursor,
+    total: initialTotal,
+  }}
+/>

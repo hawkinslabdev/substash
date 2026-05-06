@@ -1,0 +1,307 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #0d0d0d;
+  --color-surface-2: #161616;
+  --color-surface-3: #1e1e1e;
+  --color-border: #2a2a2a;
+  --color-text: #e8e8e8;
+  --color-text-muted: #888;
+  --color-accent: #ff4500;
+  --color-accent-hover: #ff6534;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --radius-card: 12px;
+  --bottom-nav-height: 56px;
+  --header-height: 48px;
+}
+
+/* Sidebar width — set by JS for collapse state, anti-flash script in PageShell reads this */
+:root {
+  --sidebar-width-desktop: 240px;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+
+  /* Keyboard focus ring — suppressed for mouse/touch, visible for keyboard */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  body {
+    margin: 0;
+    padding-bottom: var(--bottom-nav-height);
+  }
+
+  /* Vertical feed scroll-snap container */
+  .feed-container {
+    scroll-snap-type: y mandatory;
+    overflow-y: scroll;
+    height: 100dvh;
+    overscroll-behavior-y: contain;
+  }
+
+  .feed-item {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  /* Min 44px tap targets — buttons only; links use their own layout classes */
+  button,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Active press feedback */
+  button:active,
+  [role="button"]:active,
+  a:active {
+    transform: scale(0.95);
+    transition: transform 80ms ease;
+  }
+}
+
+/* Markdown rendered comment body */
+.md-body p {
+  margin-bottom: 0.5em;
+}
+.md-body p:last-child {
+  margin-bottom: 0;
+}
+.md-body strong {
+  font-weight: 600;
+}
+.md-body em {
+  font-style: italic;
+}
+.md-body code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8em;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+.md-body pre {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.md-body pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+.md-body blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 0.75em;
+  color: var(--color-text-muted);
+  margin: 0.25em 0;
+}
+.md-body a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* WYSIWYG editor content area */
+.rich-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-text-muted);
+  pointer-events: none;
+  display: block;
+}
+.rich-editor:focus {
+  outline: none;
+}
+.rich-editor h3 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0.3em 0;
+}
+.rich-editor p {
+  margin: 0.2em 0;
+}
+.rich-editor p:first-child {
+  margin-top: 0;
+}
+.rich-editor p:last-child {
+  margin-bottom: 0;
+}
+.rich-editor blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 0.75em;
+  color: var(--color-text-muted);
+  margin: 0.3em 0;
+}
+.rich-editor code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.82em;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 0.1em 0.3em;
+}
+.rich-editor pre {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.6em 0.9em;
+  overflow-x: auto;
+  margin: 0.3em 0;
+}
+.rich-editor pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.rich-editor a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+.rich-editor ul,
+.rich-editor ol {
+  padding-left: 1.4em;
+  margin: 0.2em 0;
+}
+.rich-editor li {
+  margin: 0.1em 0;
+}
+
+/* Root view transition: disabled — <main> handles its own fade via transition:animate="fade".
+   Root-level animations slide fixed elements (header, nav) which is wrong. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+/* Shimmer skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-3) 25%,
+    var(--color-border) 50%,
+    var(--color-surface-3) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* VoteButton spring burst */
+@keyframes vote-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.22);
+  }
+  65% {
+    transform: scale(0.94);
+  }
+  82% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.vote-pop {
+  animation: vote-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Feed item entrance on pagination */
+@keyframes feed-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.feed-enter {
+  animation: feed-enter 240ms ease-out both;
+}
+
+/* Offline icon pulse */
+@keyframes icon-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+.icon-pulse {
+  animation: icon-pulse 2.4s ease-in-out infinite;
+}
+
+/* Desktop layout: persistent header + collapsible sidebar */
+@media (min-width: 1024px) {
+  body {
+    padding-bottom: 0;
+    padding-top: var(--header-height);
+    padding-left: var(--sidebar-width-desktop);
+    transition: padding-left 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Cards become distinct boxed items */
+  .feed-item {
+    margin: 8px 16px;
+    border-radius: 12px;
+    background-color: var(--color-surface-2);
+    border-left: 1px solid var(--color-border);
+    border-right: 1px solid var(--color-border);
+    border-top: 1px solid var(--color-border);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+  }
+  .vote-pop {
+    animation: none;
+  }
+  .feed-enter {
+    animation: none;
+    opacity: 1;
+  }
+  .icon-pulse {
+    animation: none;
+  }
+}
