@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ request }) => {
     return new Response("Bad Request", { status: 400 });
   }
 
-  // SSRF guard — only proxy requests to the configured Stash host
+  // SSRF guard; only proxy requests to the configured Stash host
   if (!DEMO_MODE) {
     const stashBase = new URL(STASH_URL);
     if (
@@ -92,7 +92,6 @@ export const GET: APIRoute = async ({ request }) => {
 
   const clientEtag = request.headers.get("If-None-Match");
 
-  // ── Serve from server-side cache if still fresh ──────────────────────────
   const cached = imageCache.get(imageUrl);
   if (cached && Date.now() - cached.timestamp < SERVER_CACHE_TTL) {
     if (clientEtag && cached.etag && clientEtag === cached.etag) {
@@ -106,7 +105,6 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
 
-  // ── Fetch from Stash ──────────────────────────────────────────────────────
   const upstreamHeaders: Record<string, string> = {};
   if (STASH_API_KEY) upstreamHeaders["ApiKey"] = STASH_API_KEY;
   // Forward the client's ETag so Stash can 304 us if the image hasn't changed

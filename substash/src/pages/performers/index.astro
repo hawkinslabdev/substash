@@ -8,8 +8,13 @@ import { FIND_PERFORMERS } from "@/lib/stash/queries";
 import type { FindPerformersQuery } from "@/lib/stash/types";
 import { DEMO_MODE } from "astro:env/server";
 import { DEMO_PERFORMERS } from "@/lib/demo";
+import { db } from "@/lib/db";
+import { settings } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 Astro.response.headers.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+
+const pageName = db.select().from(settings).where(eq(settings.key, "page_name_performers")).get()?.value ?? "Creators";
 
 let performers: FindPerformersQuery["findPerformers"]["performers"] = [];
 let offline = false;
@@ -27,13 +32,13 @@ if (DEMO_MODE) {
 }
 ---
 
-<PageShell title="Substash: Stars">
+<PageShell title={`Substash: ${pageName}`}>
   <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)]">
     <h1 class="text-base font-semibold">
       <img
         src="/logo.svg" alt="Substash logo" class="inline w-5 h-5 mr-1 -mt-0.5"
         />
-      Stars
+      {pageName}
     </h1>
   </header>
   {offline ? <StashOffline /> : <PerformerGrid performers={performers} />}

@@ -15,6 +15,11 @@ const pinEnabled = getSetting("pin_enabled") === "true";
 const sessionHours = parseInt(getSetting("session_hours") ?? "0", 10);
 const shareEnabled = getSetting("share_enabled") === "true";
 const mediaTitleExpr = getSetting("media_title_expr") ?? DEFAULT_TITLE_EXPR;
+const feedFallbackName = getSetting("feed_fallback_name") ?? "discover";
+const feedShowPrefix = (getSetting("feed_show_prefix") ?? "true") !== "false";
+const pageNameTags = getSetting("page_name_tags") ?? "Tags";
+const pageNamePerformers = getSetting("page_name_performers") ?? "Creators";
+const pageNameStudios = getSetting("page_name_studios") ?? "Studios";
 ---
 
 <PageShell title="Substash: Settings">
@@ -33,6 +38,11 @@ const mediaTitleExpr = getSetting("media_title_expr") ?? DEFAULT_TITLE_EXPR;
     sessionHours={sessionHours}
     shareEnabled={shareEnabled}
     mediaTitleExpr={mediaTitleExpr}
+    feedFallbackName={feedFallbackName}
+    feedShowPrefix={feedShowPrefix}
+    pageNameTags={pageNameTags}
+    pageNamePerformers={pageNamePerformers}
+    pageNameStudios={pageNameStudios}
   />
 
   <BottomNav slot="nav" />

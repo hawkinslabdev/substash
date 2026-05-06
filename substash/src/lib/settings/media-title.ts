@@ -3,7 +3,7 @@ import { settings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { DEFAULT_TITLE_EXPR } from "@/lib/utils/media-title";
 
-// 3-second TTL — cheap to refresh, avoids per-item DB reads in bulk processing
+// 3-second TTL; cheap to refresh, avoids per-item DB reads in bulk processing
 let _cache: { expr: string; ts: number } | null = null;
 
 export function getTitleExpr(): string {

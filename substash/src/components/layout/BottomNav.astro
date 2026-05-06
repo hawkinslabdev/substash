@@ -1,5 +1,16 @@
 ---
 import { DEMO_MODE } from "astro:env/server";
+import { db } from "@/lib/db";
+import { settings } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+
+function getSetting(key: string, fallback: string): string {
+  return db.select().from(settings).where(eq(settings.key, key)).get()?.value ?? fallback;
+}
+
+const navPageNameTags = getSetting("page_name_tags", "Tags");
+const navPageNamePerformers = getSetting("page_name_performers", DEMO_MODE ? "Authors" : "Creators");
+const navPageNameStudios = getSetting("page_name_studios", "Studios");
 
 const navSections = [
   {
@@ -22,17 +33,17 @@ const navSections = [
     links: [
       {
         href: "/tags",
-        label: "Tags",
+        label: navPageNameTags,
         svg: `<path stroke-linecap="round" stroke-linejoin="round" d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line stroke-linecap="round" x1="7" y1="7" x2="7.01" y2="7"/>`,
       },
       {
         href: "/performers",
-        label: DEMO_MODE ? "Authors" : "Stars",
+        label: navPageNamePerformers,
         svg: `<path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>`,
       },
       {
         href: "/studios",
-        label: "Studios",
+        label: navPageNameStudios,
         svg: `<rect x="2" y="3" width="20" height="14" rx="2"/><path stroke-linecap="round" d="M8 21h8M12 17v4"/>`,
       },
     ],
@@ -68,7 +79,7 @@ const mobileLinks = [
   navSections[0].links[0], // Home
   navSections[0].links[1], // Discover
   navSections[1].links[0], // Tags
-  navSections[1].links[1], // Stars
+  navSections[1].links[1], // Performers / Creators / Authors / Stars
 ];
 
 const drawerLinks = [
@@ -450,8 +461,6 @@ const drawerLinks = [
     });
   }
 
-  // ── Drawer ───────────────────────────────────────────────────────────────────
-
   function openDrawer() {
     const drawer = document.getElementById('mobile-drawer');
     const backdrop = document.getElementById('mobile-drawer-backdrop');
@@ -469,8 +478,6 @@ const drawerLinks = [
     backdrop?.classList.add('opacity-0', 'pointer-events-none');
     trigger?.setAttribute('aria-expanded', 'false');
   }
-
-  // ── Logout modal ─────────────────────────────────────────────────────────────
 
   let _prevFocus: HTMLElement | null = null;
 
@@ -533,8 +540,6 @@ const drawerLinks = [
     sessionStorage.clear();
     window.location.href = '/auth';
   }
-
-  // ── Init ─────────────────────────────────────────────────────────────────────
 
   function initDrawerAndModal() {
     // Drawer trigger

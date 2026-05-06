@@ -9,8 +9,13 @@ import type { FindTagsQuery } from "@/lib/stash/types";
 import { filterTagList } from "@/lib/stash/filter";
 import { DEMO_MODE } from "astro:env/server";
 import { DEMO_TAGS } from "@/lib/demo";
+import { db } from "@/lib/db";
+import { settings } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 Astro.response.headers.set("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+
+const pageName = db.select().from(settings).where(eq(settings.key, "page_name_tags")).get()?.value ?? "Tags";
 
 let tags: FindTagsQuery["findTags"]["tags"] = [];
 let offline = false;
@@ -28,13 +33,13 @@ if (DEMO_MODE) {
 }
 ---
 
-<PageShell title="Substash: Tags">
+<PageShell title={`Substash: ${pageName}`}>
   <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)]">
     <h1 class="text-base font-semibold">
-      <img 
-        src="/logo.svg" alt="Substash logo" class="inline w-5 h-5 mr-1 -mt-0.5" 
+      <img
+        src="/logo.svg" alt="Substash logo" class="inline w-5 h-5 mr-1 -mt-0.5"
         />
-      Tags</h1>
+      {pageName}</h1>
   </header>
   {offline ? <StashOffline /> : <TagGrid tags={tags} />}
   <BottomNav slot="nav" />

@@ -15,7 +15,7 @@ const PAGE_BYPASS = [
   "/favicon",
 ];
 
-// Media streaming — browsers send range requests that don't reliably carry cookies;
+// Media streaming; browsers send range requests that don't reliably carry cookies;
 // stream content is only meaningful if you already know the internal scene ID.
 const API_BYPASS = ["/api/auth/", "/api/stash/stream/"];
 

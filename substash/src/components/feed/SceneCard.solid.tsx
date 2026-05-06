@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils/cn";
 import { proxyImage } from "@/lib/stash/image";
 import { timeAgo } from "@/lib/utils/markdown";
 import { getShareUrl } from "@/lib/utils/share";
-import { formatOriginDisplay } from "@/lib/utils/media-title";
 import type { SceneFeedItem } from "@/lib/stash/feed-item";
 
 interface Props {
@@ -51,7 +50,7 @@ export default function SceneCard(props: Props) {
       {/* Card header: origin · performer · date */}
       <div class="px-4 pt-3 pb-1.5 flex items-center gap-2">
         <span class="text-xs font-bold text-[var(--color-accent)] tracking-wide">
-          {formatOriginDisplay(scene().metaOrigin, scene().subredditDisplay)}
+          {scene().originDisplay}
         </span>
         <Show when={scene().metaPerformer}>
           <span

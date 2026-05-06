@@ -7,6 +7,7 @@ import {
 
 export { formatOriginDisplay };
 import { getTitleExpr } from "@/lib/settings/media-title";
+import { getFeedSettings } from "@/lib/settings/feed";
 
 export interface SubredditInfo {
   subreddit: string;
@@ -28,7 +29,8 @@ export interface ResolveTitleOpts {
   rating?: number | null;
 }
 
-function toDisplayName(sub: string): string {
+function toDisplayName(sub: string, showPrefix: boolean): string {
+  if (!showPrefix) return sub.startsWith("u_") ? sub.slice(2) : sub;
   return sub.startsWith("u_") ? `u/${sub.slice(2)}` : `r/${sub}`;
 }
 
@@ -76,12 +78,14 @@ export function resolveTitle(
   };
 
   const result = evalTitleExpr(ctx, opts?.expr ?? getTitleExpr());
+  const { fallbackName, showPrefix } = getFeedSettings();
+  const fallbackDisplay = showPrefix ? `r/${fallbackName}` : fallbackName;
 
   return {
-    subreddit: parsed?.subreddit ?? "discover",
+    subreddit: parsed?.subreddit ?? fallbackName,
     displayName: parsed?.subreddit
-      ? toDisplayName(parsed.subreddit)
-      : "r/discover",
+      ? toDisplayName(parsed.subreddit, showPrefix)
+      : fallbackDisplay,
     cleanTitle: result.title ?? "",
     isExtracted: parsed?.subreddit != null,
     performer: result.performer,
@@ -91,14 +95,16 @@ export function resolveTitle(
   };
 }
 
-/** Kept for API compatibility — prefer `resolveTitle` for new code. */
+/** Kept for API compatibility; prefer `resolveTitle` for new code. */
 export function extractSubreddit(
   rawTitle: string | null | undefined,
 ): SubredditInfo {
+  const { fallbackName, showPrefix } = getFeedSettings();
+  const fallbackDisplay = showPrefix ? `r/${fallbackName}` : fallbackName;
   if (!rawTitle) {
     return {
-      subreddit: "discover",
-      displayName: "r/discover",
+      subreddit: fallbackName,
+      displayName: fallbackDisplay,
       cleanTitle: "",
       isExtracted: false,
       performer: null,
@@ -109,8 +115,10 @@ export function extractSubreddit(
   }
   const p = parseRichTitle(rawTitle);
   return {
-    subreddit: p.subreddit ?? "discover",
-    displayName: p.subreddit ? toDisplayName(p.subreddit) : "r/discover",
+    subreddit: p.subreddit ?? fallbackName,
+    displayName: p.subreddit
+      ? toDisplayName(p.subreddit, showPrefix)
+      : fallbackDisplay,
     cleanTitle: p.clean ?? "",
     isExtracted: p.subreddit != null,
     performer: null,

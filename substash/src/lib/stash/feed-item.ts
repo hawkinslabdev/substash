@@ -1,5 +1,6 @@
 import type { StashScene, StashImage, Maybe } from "./types";
-import { resolveTitle } from "@/lib/utils/subreddit";
+import { resolveTitle, formatOriginDisplay } from "@/lib/utils/subreddit";
+import { getFeedSettings } from "@/lib/settings/feed";
 
 type Nullable<T> = T | null;
 
@@ -11,6 +12,7 @@ export interface BaseFeedItem {
   title: string | null;
   subreddit: string;
   subredditDisplay: string;
+  originDisplay: string;
   date: string | null;
   studio: { id: string; name: string; image_path: string | null } | null;
   performers: { id: string; name: string; image_path: string | null }[];
@@ -77,12 +79,14 @@ export function sceneToFeedItem(scene: StashScene): SceneFeedItem {
     date: scene.date || scene.created_at?.substring(0, 10) || null,
     rating: scene.rating100 ?? null,
   });
+  const { showPrefix } = getFeedSettings();
   return {
     id: scene.id,
     type: "scene",
     title: sub.cleanTitle || null,
     subreddit: sub.subreddit,
     subredditDisplay: sub.displayName,
+    originDisplay: formatOriginDisplay(sub.origin, sub.displayName, showPrefix),
     date: scene.date || scene.created_at?.substring(0, 10) || null,
     studio: normalizeStudio(scene.studio),
     performers: normalizePerformers(scene.performers),
@@ -121,12 +125,14 @@ export function imageToFeedItem(image: StashImage): ImageFeedItem {
       rating: image.rating100 ?? null,
     },
   );
+  const { showPrefix } = getFeedSettings();
   return {
     id: image.id,
     type: "image",
     title: sub.cleanTitle || null,
     subreddit: sub.subreddit,
     subredditDisplay: sub.displayName,
+    originDisplay: formatOriginDisplay(sub.origin, sub.displayName, showPrefix),
     date: image.date || image.created_at?.substring(0, 10) || null,
     studio: normalizeStudio(image.studio),
     performers: normalizePerformers(image.performers),

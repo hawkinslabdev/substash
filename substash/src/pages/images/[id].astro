@@ -11,6 +11,7 @@ import { proxyImage } from "@/lib/stash/image";
 import type { FindImageQuery } from "@/lib/stash/types";
 import { resolveTitle, formatOriginDisplay } from "@/lib/utils/subreddit";
 import { filterTagList, filterByTags } from "@/lib/stash/filter";
+import { getFeedSettings } from "@/lib/settings/feed";
 import { timeAgo } from "@/lib/utils/markdown";
 import { DEMO_MODE } from "astro:env/server";
 import { getDemoImage } from "@/lib/demo";
@@ -46,7 +47,7 @@ const sub = resolveTitle(image.title, fileSource?.path, fileSource?.basename, {
   rating: image.rating100 ?? null,
 });
 const displayTitle = sub.cleanTitle || "Untitled";
-const originDisplay = formatOriginDisplay(sub.origin, sub.displayName);
+const originDisplay = formatOriginDisplay(sub.origin, sub.displayName, getFeedSettings().showPrefix);
 const creditLine = sub.credit;
 const dayDisplay = sub.day;
 

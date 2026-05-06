@@ -4,7 +4,6 @@ import VoteButton from "@/components/post/VoteButton.solid";
 import { proxyImage } from "@/lib/stash/image";
 import { timeAgo } from "@/lib/utils/markdown";
 import { getShareUrl } from "@/lib/utils/share";
-import { formatOriginDisplay } from "@/lib/utils/media-title";
 import type { ImageFeedItem } from "@/lib/stash/feed-item";
 
 interface Props {
@@ -68,7 +67,7 @@ export default function ImageCard(props: Props) {
       {/* Card header: origin · performer · date */}
       <div class="px-4 pt-3 pb-1.5 flex items-center gap-2">
         <span class="text-xs font-bold text-[var(--color-accent)] tracking-wide">
-          {formatOriginDisplay(image().metaOrigin, image().subredditDisplay)}
+          {image().originDisplay}
         </span>
         <Show when={image().metaPerformer}>
           <span

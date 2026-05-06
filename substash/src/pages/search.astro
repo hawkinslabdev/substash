@@ -1,8 +1,18 @@
 ---
 import PageShell from "@/components/layout/PageShell.astro";
 import BottomNav from "@/components/layout/BottomNav.astro";
+import { db } from "@/lib/db";
+import { settings } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+
+function getSetting(key: string, fallback: string): string {
+  return db.select().from(settings).where(eq(settings.key, key)).get()?.value ?? fallback;
+}
 
 const q = Astro.url.searchParams.get("q")?.trim() ?? "";
+const pageNameTags = getSetting("page_name_tags", "Tags");
+const pageNamePerformers = getSetting("page_name_performers", "Creators");
+const pageNameStudios = getSetting("page_name_studios", "Studios");
 ---
 
 <PageShell title={q ? `Search: ${q} — Substash` : "Substash: Search"}>
@@ -68,20 +78,20 @@ const q = Astro.url.searchParams.get("q")?.trim() ?? "";
       {[
         {
           href: "/tags",
-          label: "Tags",
-          desc: "Browse all tags",
+          label: pageNameTags,
+          desc: `Browse all ${pageNameTags.toLowerCase()}`,
           svg: `<path stroke-linecap="round" stroke-linejoin="round" d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line stroke-linecap="round" x1="7" y1="7" x2="7.01" y2="7"/>`,
         },
         {
           href: "/performers",
-          label: "Stars",
-          desc: "Browse performers",
+          label: pageNamePerformers,
+          desc: `Browse ${pageNamePerformers.toLowerCase()}`,
           svg: `<path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>`,
         },
         {
           href: "/studios",
-          label: "Studios",
-          desc: "Browse studios",
+          label: pageNameStudios,
+          desc: `Browse ${pageNameStudios.toLowerCase()}`,
           svg: `<rect x="2" y="3" width="20" height="14" rx="2"/><path stroke-linecap="round" d="M8 21h8M12 17v4"/>`,
         },
         {

@@ -13,6 +13,11 @@ interface Props {
   sessionHours: number;
   shareEnabled: boolean;
   mediaTitleExpr: string;
+  feedFallbackName: string;
+  feedShowPrefix: boolean;
+  pageNameTags: string;
+  pageNamePerformers: string;
+  pageNameStudios: string;
 }
 
 export default function Settings(props: Props) {
@@ -26,7 +31,95 @@ export default function Settings(props: Props) {
   const [pinLoading, setPinLoading] = createSignal(false);
   const [toast, setToast] = createSignal("");
 
-  // ── Title expression ──────────────────────────────────────────────────────
+  const [feedFallbackName, setFeedFallbackName] = createSignal(
+    props.feedFallbackName,
+  );
+  const [feedShowPrefix, setFeedShowPrefix] = createSignal(
+    props.feedShowPrefix,
+  );
+  const [savedFeed, setSavedFeed] = createSignal({
+    fallbackName: props.feedFallbackName,
+    showPrefix: props.feedShowPrefix,
+  });
+  const feedDirty = createMemo(
+    () =>
+      feedFallbackName() !== savedFeed().fallbackName ||
+      feedShowPrefix() !== savedFeed().showPrefix,
+  );
+  const [feedSaving, setFeedSaving] = createSignal(false);
+
+  async function saveFeed() {
+    if (!feedDirty()) return;
+    setFeedSaving(true);
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          feedFallbackName: feedFallbackName(),
+          feedShowPrefix: feedShowPrefix(),
+        }),
+      });
+      setSavedFeed({
+        fallbackName: feedFallbackName(),
+        showPrefix: feedShowPrefix(),
+      });
+      showToast("Feed settings saved.");
+    } catch {
+      showToast("Failed to save.");
+    } finally {
+      setFeedSaving(false);
+    }
+  }
+
+  const [pageNamesOpen, setPageNamesOpen] = createSignal(false);
+  const [pageNameTags, setPageNameTags] = createSignal(props.pageNameTags);
+  const [pageNamePerformers, setPageNamePerformers] = createSignal(
+    props.pageNamePerformers,
+  );
+  const [pageNameStudios, setPageNameStudios] = createSignal(
+    props.pageNameStudios,
+  );
+  const [savedPageNames, setSavedPageNames] = createSignal({
+    tags: props.pageNameTags,
+    performers: props.pageNamePerformers,
+    studios: props.pageNameStudios,
+  });
+  const pageNamesDirty = createMemo(
+    () =>
+      pageNameTags() !== savedPageNames().tags ||
+      pageNamePerformers() !== savedPageNames().performers ||
+      pageNameStudios() !== savedPageNames().studios,
+  );
+  const [pageNamesSaving, setPageNamesSaving] = createSignal(false);
+
+  async function savePageNames() {
+    if (!pageNamesDirty()) return;
+    setPageNamesSaving(true);
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pageNameTags: pageNameTags(),
+          pageNamePerformers: pageNamePerformers(),
+          pageNameStudios: pageNameStudios(),
+        }),
+      });
+      setSavedPageNames({
+        tags: pageNameTags(),
+        performers: pageNamePerformers(),
+        studios: pageNameStudios(),
+      });
+      showToast("Page names saved.");
+      setTimeout(() => window.location.reload(), 800);
+    } catch {
+      showToast("Failed to save.");
+    } finally {
+      setPageNamesSaving(false);
+    }
+  }
+
   const [scriptOpen, setScriptOpen] = createSignal(false);
   const [titleExpr, setTitleExpr] = createSignal(props.mediaTitleExpr);
   const [titleExprSaving, setTitleExprSaving] = createSignal(false);
@@ -595,6 +688,151 @@ export default function Settings(props: Props) {
                 </p>
               </Show>
             </div>
+          </div>
+        </Show>
+
+        {/* Page names — collapsible */}
+        <div class="border-t border-[var(--color-border)]">
+          <button
+            onClick={() => setPageNamesOpen((v) => !v)}
+            class="w-full flex items-center justify-between px-4 min-h-[56px] gap-4 hover:bg-[var(--color-surface-2)] transition-colors active:scale-[0.99]"
+          >
+            <div class="min-w-0 text-left">
+              <p class="text-sm text-[var(--color-text)]">Page names</p>
+              <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
+                Custom labels for Tags, Performers, and Studios pages
+              </p>
+            </div>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class={`shrink-0 text-[var(--color-text-muted)] transition-transform duration-200 ${pageNamesOpen() ? "rotate-180" : ""}`}
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="m6 9 6 6 6-6"
+              />
+            </svg>
+          </button>
+
+          <Show when={pageNamesOpen()}>
+            <div class="px-4 pb-5 space-y-4 border-t border-[var(--color-border)] pt-4">
+              {(
+                [
+                  ["Tags page", pageNameTags, setPageNameTags, "Tags"],
+                  [
+                    "Performers page",
+                    pageNamePerformers,
+                    setPageNamePerformers,
+                    "Creators",
+                  ],
+                  [
+                    "Studios page",
+                    pageNameStudios,
+                    setPageNameStudios,
+                    "Studios",
+                  ],
+                ] as [string, () => string, (v: string) => void, string][]
+              ).map(([label, get, set, placeholder]) => (
+                <div>
+                  <label class="text-xs text-[var(--color-text-muted)] mb-1.5 block">
+                    {label}
+                  </label>
+                  <input
+                    type="text"
+                    value={get()}
+                    onInput={(e) => set(e.currentTarget.value)}
+                    placeholder={placeholder}
+                    class="w-full text-sm bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-xl px-3 py-2.5 text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                  />
+                </div>
+              ))}
+              <div class="flex items-center gap-4 pt-1">
+                <button
+                  onClick={savePageNames}
+                  disabled={!pageNamesDirty() || pageNamesSaving()}
+                  class="h-10 px-5 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {pageNamesSaving() ? "Saving…" : "Save"}
+                </button>
+                <Show when={pageNamesDirty() && !pageNamesSaving()}>
+                  <p class="text-xs text-[var(--color-text-muted)]">
+                    Unsaved changes
+                  </p>
+                </Show>
+              </div>
+            </div>
+          </Show>
+        </div>
+      </div>
+
+      {/* FEED */}
+      <SectionLabel>Feed</SectionLabel>
+      <div class="border-t border-b border-[var(--color-border)] divide-y divide-[var(--color-border)]">
+        {/* Show r/ prefix toggle */}
+        <Row>
+          <RowLabel
+            title="Show r/ prefix"
+            sub="Display r/ or u/ before community names in cards"
+          />
+          <button
+            role="switch"
+            aria-checked={feedShowPrefix()}
+            onClick={() => setFeedShowPrefix((v) => !v)}
+            class="shrink-0 flex items-center justify-center focus:outline-none"
+          >
+            <div
+              class={`inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent transition-colors duration-200 ${feedShowPrefix() ? "bg-[var(--color-accent)]" : "bg-[#404040]"}`}
+            >
+              <span
+                aria-hidden="true"
+                class={`inline-block h-5 w-5 rounded-full bg-white transition-transform duration-200 ease-in-out ${feedShowPrefix() ? "translate-x-5" : "translate-x-0"}`}
+                style={{ "box-shadow": "0 1px 4px rgba(0,0,0,0.5)" }}
+              />
+            </div>
+          </button>
+        </Row>
+
+        {/* Fallback community name */}
+        <Row>
+          <RowLabel
+            title="Fallback community"
+            sub="Shown when no community is found in the title"
+          />
+          <div class="flex items-center shrink-0 gap-0 rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-3)]">
+            <Show when={feedShowPrefix()}>
+              <span class="pl-3 pr-1 text-sm font-mono text-[var(--color-text-muted)] select-none">
+                r/
+              </span>
+            </Show>
+            <input
+              type="text"
+              value={feedFallbackName()}
+              onInput={(e) => setFeedFallbackName(e.currentTarget.value)}
+              placeholder="discover"
+              class={`w-28 text-sm bg-transparent py-2 text-[var(--color-text)] focus:outline-none transition-colors ${feedShowPrefix() ? "pr-3" : "px-3"}`}
+            />
+          </div>
+        </Row>
+
+        {/* Save row */}
+        <Show when={feedDirty()}>
+          <div class="flex items-center gap-4 px-4 py-3">
+            <button
+              onClick={saveFeed}
+              disabled={feedSaving()}
+              class="h-9 px-5 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {feedSaving() ? "Saving…" : "Save"}
+            </button>
+            <p class="text-xs text-[var(--color-text-muted)]">
+              Unsaved changes
+            </p>
           </div>
         </Show>
       </div>

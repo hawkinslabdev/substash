@@ -36,7 +36,7 @@ async function recordLike(
         set: { mediaType, title, thumbnailUrl, createdAt: new Date() },
       });
   } catch {
-    // Non-fatal — vote still succeeded
+    // Non-fatal; vote still succeeded
   }
 }
 

@@ -1,18 +1,13 @@
 export interface MediaTitleContext {
-  // ── Stash API fields ─────────────────────────────────────────────────────
   title: string | null; // raw title stored in Stash
   date: string | null; // scene/image date from Stash (YYYY-MM-DD)
   rating: number | null; // rating 0–100
   studio: string | null; // studio name
   performers: string[]; // performer names
   tags: string[]; // tag names
-
-  // ── File-derived ─────────────────────────────────────────────────────────
   filename: string | null; // basename without extension
   basename: string | null; // full basename with extension
   ext: string | null; // file extension (no dot)
-
-  // ── Parsed from title (or filename as fallback) ───────────────────────────
   subreddit: string | null; // e.g. "memes", null if no "sub - rest" pattern
   postTitle: string | null; // portion after "subreddit - " prefix, unstripped
   author: string | null; // from "(by Author)" pattern
@@ -104,7 +99,7 @@ export function parseRichTitle(rawTitle: string): ParsedTitleParts {
 }
 
 /**
- * Default script — preserves original behavior (clean title or filename).
+ * Default script; preserves original behavior (clean title or filename).
  * All available variables are defined so users can include them by editing the return.
  */
 export const DEFAULT_TITLE_EXPR = `const base      = clean || filename;
@@ -118,8 +113,8 @@ return { title: base, performer, origin, credit, day };`;
  * Build a callable function from a user-supplied script.
  *
  * Two modes (tried in order):
- *   1. Expression  — `return (${code})` — single-line shorthands like `clean || filename`
- *   2. Script body — `${code}` raw      — multi-statement; must include `return`
+ *   1. Expression ; `return (${code})`; single-line shorthands like `clean || filename`
+ *   2. Script body; `${code}` raw     ; multi-statement; must include `return`
  *
  * Returns null when the code cannot be compiled in either mode.
  */
@@ -217,9 +212,11 @@ export function evalTitleExpr(
 export function formatOriginDisplay(
   origin: string | null,
   fallback: string,
+  showPrefix = true,
 ): string {
   if (!origin) return fallback;
   if (origin.includes("/")) return origin;
+  if (!showPrefix) return origin.startsWith("u_") ? origin.slice(2) : origin;
   return origin.startsWith("u_") ? `u/${origin.slice(2)}` : `r/${origin}`;
 }
 

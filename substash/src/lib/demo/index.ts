@@ -1,6 +1,7 @@
 import type { ImageFeedItem } from "@/lib/stash/feed-item";
 import type { StashImage, StashPerformerDetail } from "@/lib/stash/types";
 import { encodeCursor, nextCursor, decodeCursor } from "@/lib/utils/cursor";
+import { getFeedSettings } from "@/lib/settings/feed";
 
 const TOP_50_MEMES = [
   {
@@ -429,7 +430,7 @@ export const DEMO_TAGS = [
   },
 ];
 
-// mulberry32 seeded PRNG — deterministic per item
+// mulberry32 seeded PRNG; deterministic per item
 function seeded(seed: number) {
   let s = seed;
   return () => {
@@ -496,6 +497,10 @@ export const DEMO_ITEMS: ImageFeedItem[] = TOP_50_MEMES.map((meme, i) => {
     subredditDisplay:
       templateId.charAt(0).toUpperCase() +
       templateId.slice(1).replace(/-/g, " "),
+    get originDisplay() {
+      const { showPrefix } = getFeedSettings();
+      return showPrefix ? `r/${templateId}` : templateId;
+    },
     date,
     studio: { id: studio.id, name: studio.name, image_path: null },
     performers: [{ id: performer.id, name: performer.name, image_path: null }],
