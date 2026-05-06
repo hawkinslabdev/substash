@@ -2,6 +2,7 @@ import { createSignal, For, Show } from "solid-js";
 import CommentForm from "./CommentForm.solid";
 import { renderMarkdown, timeAgo } from "@/lib/utils/markdown";
 import { sanitize } from "@/lib/utils/sanitize";
+import { showToast } from "@/lib/utils/toast";
 import type { Comment } from "@/lib/db/schema";
 
 function renderBody(body: string): string {
@@ -24,6 +25,20 @@ interface Props {
 
 export default function CommentThread(props: Props) {
   const [replyingTo, setReplyingTo] = createSignal<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = createSignal<string | null>(
+    null,
+  );
+
+  async function handleDelete(id: string) {
+    const res = await fetch(`/api/comments/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      showToast("Comment deleted");
+      props.onRefetch?.();
+    } else {
+      showToast("Failed to delete comment", 3000, "error");
+    }
+    setConfirmingDelete(null);
+  }
 
   const children = () =>
     props.comments.filter(
@@ -61,16 +76,45 @@ export default function CommentThread(props: Props) {
                   >
                     {timeAgo(date)}
                   </time>
-                  <button
-                    onClick={() =>
-                      setReplyingTo(
-                        replyingTo() === comment.id ? null : comment.id,
-                      )
+                  <Show
+                    when={confirmingDelete() === comment.id}
+                    fallback={
+                      <>
+                        <button
+                          onClick={() =>
+                            setReplyingTo(
+                              replyingTo() === comment.id ? null : comment.id,
+                            )
+                          }
+                          class="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors min-h-0 min-w-0 h-auto"
+                        >
+                          {replyingTo() === comment.id ? "Cancel" : "Reply"}
+                        </button>
+                        <button
+                          onClick={() => setConfirmingDelete(comment.id)}
+                          class="text-[10px] text-[var(--color-text-muted)] hover:text-rose-400 transition-colors min-h-0 min-w-0 h-auto"
+                        >
+                          Delete
+                        </button>
+                      </>
                     }
-                    class="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors min-h-0 min-w-0 h-auto"
                   >
-                    {replyingTo() === comment.id ? "Cancel" : "Reply"}
-                  </button>
+                    <span class="text-[10px] text-[var(--color-text-muted)]">
+                      Delete?
+                    </span>
+                    <button
+                      onClick={() => handleDelete(comment.id)}
+                      class="text-[10px] text-rose-400 hover:text-rose-300 transition-colors min-h-0 min-w-0 h-auto"
+                    >
+                      Yes
+                    </button>
+                    <button
+                      onClick={() => setConfirmingDelete(null)}
+                      class="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors min-h-0 min-w-0 h-auto"
+                    >
+                      No
+                    </button>
+                  </Show>
                 </div>
               </div>
 
