@@ -172,7 +172,13 @@ export const GET: APIRoute = async ({ request }) => {
     });
 
     return new Response(
-      JSON.stringify({ items, cursor, nextCursor: next, total: totalCount, stashError }),
+      JSON.stringify({
+        items,
+        cursor,
+        nextCursor: next,
+        total: totalCount,
+        stashError,
+      }),
       { headers: { "Content-Type": "application/json" } },
     );
   } catch (err) {

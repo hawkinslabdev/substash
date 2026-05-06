@@ -8,8 +8,16 @@ export default function Toast() {
 
   onMount(() => {
     function handler(e: Event) {
-      const { message: msg, duration, variant: v } = (
-        e as CustomEvent<{ message: string; duration: number; variant?: ToastVariant }>
+      const {
+        message: msg,
+        duration,
+        variant: v,
+      } = (
+        e as CustomEvent<{
+          message: string;
+          duration: number;
+          variant?: ToastVariant;
+        }>
       ).detail;
       setMessage(msg);
       setVariant(v ?? "default");

@@ -92,9 +92,15 @@ async function fetchPage(
   const res = await fetch(url.toString());
   const data: PageResult = await res.json();
   if (!res.ok || data.stashError) {
-    window.dispatchEvent(new CustomEvent("substash:toast", {
-      detail: { message: "Couldn't reach Stash", duration: 5000, variant: "error" },
-    }));
+    window.dispatchEvent(
+      new CustomEvent("substash:toast", {
+        detail: {
+          message: "Couldn't reach Stash",
+          duration: 5000,
+          variant: "error",
+        },
+      }),
+    );
   }
   return data;
 }
