@@ -24,6 +24,7 @@ interface PageResult {
   cursor: string;
   nextCursor: string | null;
   total: number;
+  stashError?: boolean;
 }
 
 interface Props {
@@ -89,7 +90,13 @@ async function fetchPage(
   if (params.performerId) url.searchParams.set("performer", params.performerId);
 
   const res = await fetch(url.toString());
-  return res.json();
+  const data: PageResult = await res.json();
+  if (!res.ok || data.stashError) {
+    window.dispatchEvent(new CustomEvent("substash:toast", {
+      detail: { message: "Couldn't reach Stash", duration: 5000, variant: "error" },
+    }));
+  }
+  return data;
 }
 
 function FeedInner(props: Props) {

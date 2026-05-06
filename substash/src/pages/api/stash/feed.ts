@@ -91,12 +91,14 @@ export const GET: APIRoute = async ({ request }) => {
   };
 
   try {
+    let stashError = false;
     const [scenesData, imagesData] = await Promise.all([
       stashRequest<FindScenesQuery>(FIND_SCENES, {
         filter: sceneStashFilter,
         scene_filter: Object.keys(sceneFilter).length ? sceneFilter : undefined,
       }).catch((e) => {
         console.error("[feed] scenes fetch failed:", e);
+        stashError = true;
         return { findScenes: { count: 0, scenes: [] } };
       }),
       stashRequest<FindImagesQuery>(FIND_IMAGES, {
@@ -104,6 +106,7 @@ export const GET: APIRoute = async ({ request }) => {
         image_filter: Object.keys(imageFilter).length ? imageFilter : undefined,
       }).catch((e) => {
         console.error("[feed] images fetch failed:", e);
+        stashError = true;
         return { findImages: { count: 0, images: [] } };
       }),
     ]);
@@ -169,7 +172,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
 
     return new Response(
-      JSON.stringify({ items, cursor, nextCursor: next, total: totalCount }),
+      JSON.stringify({ items, cursor, nextCursor: next, total: totalCount, stashError }),
       { headers: { "Content-Type": "application/json" } },
     );
   } catch (err) {

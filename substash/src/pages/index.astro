@@ -32,6 +32,7 @@ const TYPES_PER_PAGE = 10;
 let items: import("@/lib/stash/feed-item").FeedItem[] = [];
 let count = 0;
 let offline = false;
+let stashError = false;
 
 let demoSeed: number | undefined;
 if (DEMO_MODE) {
@@ -54,10 +55,10 @@ if (DEMO_MODE) {
         sort: sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : sort,
         direction: sort !== "random" ? "DESC" : undefined,
       },
-    }).catch((e) => { console.error("[home] scenes fetch failed:", e); return { findScenes: { count: 0, scenes: [] } }; }),
+    }).catch((e) => { console.error("[home] scenes fetch failed:", e); stashError = true; return { findScenes: { count: 0, scenes: [] } }; }),
     stashRequest<FindImagesQuery>(FIND_IMAGES, {
       filter: buildImageFilter(),
-    }).catch((e) => { console.error("[home] images fetch failed:", e); return { findImages: { count: 0, images: [] } }; }),
+    }).catch((e) => { console.error("[home] images fetch failed:", e); stashError = true; return { findImages: { count: 0, images: [] } }; }),
   ]);
 
   // Filter out excluded tags BEFORE converting to FeedItems
@@ -117,3 +118,13 @@ const cursorPayload: CursorPayload = { page: 1, perPage: 20, total: count, sort,
     document.cookie = `substash-sort=${sort}; path=/; max-age=31536000; SameSite=Strict`;
   });
 </script>
+
+{stashError && (
+  <script>
+    document.addEventListener("astro:page-load", () => {
+      window.dispatchEvent(new CustomEvent("substash:toast", {
+        detail: { message: "Couldn't reach Stash", duration: 5000, variant: "error" }
+      }));
+    }, { once: true });
+  </script>
+)}
