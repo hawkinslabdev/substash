@@ -1,6 +1,7 @@
 import {
   createSignal,
   createEffect,
+  on,
   For,
   Show,
   Switch,
@@ -111,6 +112,8 @@ function FeedInner(props: Props) {
   const [refreshing, setRefreshing] = createSignal(false);
   // Incrementing this key forces a brand-new random fetch, discarding cached pages.
   const [refreshKey, setRefreshKey] = createSignal(0);
+  // Ref so the post-load effect can call the scroll check that's defined in onMount.
+  let checkScrollFn: (() => void) | null = null;
 
   const endMessage = createMemo(() => {
     // We access refreshKey so the memo updates when the feed is reset
@@ -152,6 +155,19 @@ function FeedInner(props: Props) {
     }
   });
 
+  // After each page load, re-check scroll position. New items increase scrollHeight
+  // but leave scrollTop unchanged — progress drops below the threshold and no scroll
+  // events fire until the user moves again, causing an invisible stall.
+  createEffect(
+    on(
+      () => query.isFetchingNextPage,
+      (fetching, wasFetching) => {
+        if (!fetching && wasFetching) checkScrollFn?.();
+      },
+      { defer: true },
+    ),
+  );
+
   onMount(() => {
     // Scroll-based prefetch: triggers at 70% of loaded content height.
     // This ensures the next page is in flight well before the user hits the
@@ -169,8 +185,12 @@ function FeedInner(props: Props) {
         }
       });
     }
+    checkScrollFn = checkScroll;
     window.addEventListener("scroll", checkScroll, { passive: true });
-    onCleanup(() => window.removeEventListener("scroll", checkScroll));
+    onCleanup(() => {
+      window.removeEventListener("scroll", checkScroll);
+      checkScrollFn = null;
+    });
 
     // Pull-to-refresh
     function onTouchStart(e: TouchEvent) {
