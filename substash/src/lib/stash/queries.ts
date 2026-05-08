@@ -16,23 +16,16 @@ export const FIND_SCENES = gql`
           stream
           screenshot
           preview
-          sprite
-          vtt
         }
         files {
-          id
           path
           width
           height
           duration
-          video_codec
-          audio_codec
-          size
         }
         studio {
           id
           name
-          image_path
         }
         performers {
           id
@@ -188,7 +181,6 @@ export const FIND_IMAGES = gql`
         title
         date
         created_at
-        details
         rating100
         o_counter
         paths {
@@ -209,21 +201,10 @@ export const FIND_IMAGES = gql`
           name
         }
         files {
-          id
           width
           height
           path
           basename
-        }
-        visual_files {
-          ... on ImageFile {
-            path
-            basename
-          }
-          ... on VideoFile {
-            path
-            basename
-          }
         }
       }
     }

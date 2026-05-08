@@ -7,7 +7,7 @@ import { STASH_URL, STASH_API_KEY } from "astro:env/server";
 import http from "http";
 import https from "https";
 
-const TIMEOUT_MS = 10000;
+const TIMEOUT_MS = 5000;
 
 const agent = new (STASH_URL.startsWith("https") ? https : http).Agent({
   keepAlive: true,

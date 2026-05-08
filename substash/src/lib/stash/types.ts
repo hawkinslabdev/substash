@@ -7,8 +7,6 @@ export type StashPaths = {
   stream: Maybe<string>;
   screenshot: Maybe<string>;
   preview: Maybe<string>;
-  sprite: Maybe<string>;
-  vtt: Maybe<string>;
 };
 
 export type StashVideoFile = {
@@ -50,7 +48,6 @@ export type StashPerformer = {
 export type StashScene = {
   id: string;
   title: Maybe<string>;
-  details: Maybe<string>;
   date: Maybe<string>;
   created_at: Maybe<string>;
   rating100: Maybe<number>;
@@ -113,11 +110,10 @@ export type StashImagePaths = {
 };
 
 export type StashImageFile = {
-  id: string;
-  path: Maybe<string>;
-  basename: Maybe<string>;
   width: number;
   height: number;
+  path: string;
+  basename: string;
 };
 
 export type StashVisualFile = {
@@ -130,7 +126,6 @@ export type StashImage = {
   title: Maybe<string>;
   date: Maybe<string>;
   created_at: Maybe<string>;
-  details: Maybe<string>;
   rating100: Maybe<number>;
   o_counter: Maybe<number>;
   paths: StashImagePaths;

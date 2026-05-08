@@ -1,0 +1,48 @@
+---
+import type { FeedItem } from "@/lib/stash/feed-item";
+import type { CursorPayload } from "@/lib/utils/cursor";
+import { encodeCursor, nextCursor } from "@/lib/utils/cursor";
+import FeedContainer from "./FeedContainer.astro";
+import StashOffline from "@/components/ui/StashOffline.astro";
+
+export interface FeedContentResult {
+  items: FeedItem[];
+  count: number;
+  cursorPayload: CursorPayload;
+  stashError: boolean;
+}
+
+interface Props {
+  dataPromise: Promise<FeedContentResult>;
+  sort: string;
+}
+
+const { dataPromise, sort } = Astro.props;
+const { items, count, cursorPayload, stashError } = await dataPromise;
+---
+
+<script>
+  document.getElementById("feed-skeleton")?.remove();
+</script>
+
+{items.length === 0 && !stashError ? (
+  <StashOffline />
+) : (
+  <FeedContainer
+    initialItems={items}
+    initialCursor={encodeCursor(cursorPayload)}
+    initialNextCursor={nextCursor(cursorPayload)}
+    initialTotal={count}
+    sort={sort}
+  />
+)}
+
+{stashError && (
+  <script>
+    document.addEventListener("astro:page-load", () => {
+      window.dispatchEvent(new CustomEvent("substash:toast", {
+        detail: { message: "Couldn't reach Stash", duration: 5000, variant: "error" }
+      }));
+    }, { once: true });
+  </script>
+)}

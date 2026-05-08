@@ -2,16 +2,19 @@
 import PageShell from "@/components/layout/PageShell.astro";
 import BottomNav from "@/components/layout/BottomNav.astro";
 import FeedContainer from "@/components/feed/FeedContainer.astro";
+import FeedContent from "@/components/feed/FeedContent.astro";
 import StashOffline from "@/components/ui/StashOffline.astro";
 import { stashRequest } from "@/lib/stash/client";
 import { FIND_SCENES, FIND_IMAGES } from "@/lib/stash/queries";
 import { encodeCursor, nextCursor, type CursorPayload } from "@/lib/utils/cursor";
 import { sceneToFeedItem, imageToFeedItem } from "@/lib/stash/feed-item";
+import type { FeedItem } from "@/lib/stash/feed-item";
 import type { FindScenesQuery, FindImagesQuery } from "@/lib/stash/types";
 import { filterByTags } from "@/lib/stash/filter";
 import { DEMO_MODE } from "astro:env/server";
 import { demoFirstPage } from "@/lib/demo";
 import SortBar from "@/components/ui/SortBar.astro";
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 const ALLOWED_SORTS = ["date", "rating", "random"] as const;
 type Sort = (typeof ALLOWED_SORTS)[number];
@@ -24,64 +27,99 @@ const sort: Sort = (ALLOWED_SORTS as readonly string[]).includes(rawSort)
   ? (rawSort as Sort)
   : "date";
 
-// Generate stable seed for random sort (persists across pagination)
 const seed = sort === "random" ? (Date.now() ^ (Math.random() * 2147483647)) : undefined;
+const TYPES_PER_PAGE = 6;
 
-const TYPES_PER_PAGE = 10;
-
-let items: import("@/lib/stash/feed-item").FeedItem[] = [];
-let count = 0;
-let offline = false;
-let stashError = false;
-
-let demoSeed: number | undefined;
-if (DEMO_MODE) {
-  const demo = demoFirstPage(sort);
-  items = demo.items;
-  count = demo.count;
-  demoSeed = demo.seed;
-} else try {
-  const buildImageFilter = (): Record<string, unknown> => {
-    if (sort === "random") return { page: 1, per_page: TYPES_PER_PAGE, sort: "random" };
-    if (sort === "rating") return { page: 1, per_page: TYPES_PER_PAGE, sort: "o_counter", direction: "DESC" };
-    return { page: 1, per_page: TYPES_PER_PAGE, sort: "created_at", direction: "DESC" };
-  };
-
-  const [scenesData, imagesData] = await Promise.all([
-    stashRequest<FindScenesQuery>(FIND_SCENES, {
-      filter: {
-        page: 1,
-        per_page: TYPES_PER_PAGE,
-        sort: sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : sort,
-        direction: sort !== "random" ? "DESC" : undefined,
-      },
-    }).catch((e) => { console.error("[home] scenes fetch failed:", e); stashError = true; return { findScenes: { count: 0, scenes: [] } }; }),
-    stashRequest<FindImagesQuery>(FIND_IMAGES, {
-      filter: buildImageFilter(),
-    }).catch((e) => { console.error("[home] images fetch failed:", e); stashError = true; return { findImages: { count: 0, images: [] } }; }),
-  ]);
-
-  // Filter out excluded tags BEFORE converting to FeedItems
-  const filteredScenes = filterByTags(scenesData.findScenes.scenes);
-  const filteredImages = filterByTags(imagesData.findImages.images);
-
-  const scenes = filteredScenes.map(sceneToFeedItem);
-  const images = filteredImages.map(imageToFeedItem);
-
-  const interleaved: typeof items = [];
-  const maxLen = Math.max(scenes.length, images.length);
-  for (let i = 0; i < maxLen; i++) {
-    if (i < scenes.length) interleaved.push(scenes[i]);
-    if (i < images.length) interleaved.push(images[i]);
-  }
-
-  items = interleaved;
-  count = scenesData.findScenes.count + imagesData.findImages.count;
-} catch {
-  offline = true;
+interface FeedResult {
+  items: FeedItem[];
+  count: number;
+  cursorPayload: CursorPayload;
+  stashError: boolean;
 }
 
-const cursorPayload: CursorPayload = { page: 1, perPage: 20, total: count, sort, seed: DEMO_MODE ? demoSeed : seed };
+async function fetchFeed(): Promise<FeedResult> {
+  let items: FeedItem[] = [];
+  let count = 0;
+  let stashError = false;
+
+  try {
+    const [scenesData, imagesData] = await Promise.all([
+      stashRequest<FindScenesQuery>(FIND_SCENES, {
+        filter: {
+          page: 1,
+          per_page: TYPES_PER_PAGE,
+          sort: sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : sort,
+          direction: sort !== "random" ? "DESC" : undefined,
+        },
+      }).catch((e) => {
+        console.error("[home] scenes fetch failed:", e);
+        stashError = true;
+        return { findScenes: { count: 0, scenes: [] } };
+      }),
+      stashRequest<FindImagesQuery>(FIND_IMAGES, {
+        filter: sort === "random"
+          ? { page: 1, per_page: TYPES_PER_PAGE, sort: "random" }
+          : sort === "rating"
+            ? { page: 1, per_page: TYPES_PER_PAGE, sort: "o_counter", direction: "DESC" }
+            : { page: 1, per_page: TYPES_PER_PAGE, sort: "created_at", direction: "DESC" },
+      }).catch((e) => {
+        console.error("[home] images fetch failed:", e);
+        stashError = true;
+        return { findImages: { count: 0, images: [] } };
+      }),
+    ]);
+
+    const filteredScenes = filterByTags(scenesData.findScenes.scenes);
+    const filteredImages = filterByTags(imagesData.findImages.images);
+
+    const scenes = filteredScenes.map(sceneToFeedItem);
+    const images = filteredImages.map(imageToFeedItem);
+
+    const maxLen = Math.max(scenes.length, images.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (i < scenes.length) items.push(scenes[i]);
+      if (i < images.length) items.push(images[i]);
+    }
+
+    count = scenesData.findScenes.count + imagesData.findImages.count;
+  } catch (e) {
+    console.error("[home] unexpected feed error:", e);
+    return { items: [], count: 0, cursorPayload: { page: 1, perPage: 20, total: 0, sort, seed }, stashError: false };
+  }
+
+  return {
+    items,
+    count,
+    cursorPayload: { page: 1, perPage: 20, total: count, sort, seed },
+    stashError,
+  };
+}
+
+// Sync data from cache or DEMO_MODE — renders directly with no streaming.
+// Otherwise start the fetch (NOT awaited) so Astro streams the shell first.
+let syncResult: FeedResult | null = null;
+let dataPromise: Promise<FeedResult> | null = null;
+let demoSeed: number | undefined;
+
+if (DEMO_MODE) {
+  const demo = demoFirstPage(sort);
+  syncResult = {
+    items: demo.items,
+    count: demo.count,
+    cursorPayload: { page: 1, perPage: 20, total: demo.count, sort, seed: undefined },
+    stashError: false,
+  };
+  demoSeed = demo.seed;
+} else {
+  const cacheKey = `feed:${sort}${seed !== undefined ? `:${seed}` : ''}`;
+  syncResult = cacheGet<FeedResult>(cacheKey);
+  if (!syncResult) {
+    dataPromise = fetchFeed().then((result) => {
+      cacheSet(cacheKey, result);
+      return result;
+    });
+  }
+}
 ---
 
 <PageShell title="Substash: Home">
@@ -96,16 +134,46 @@ const cursorPayload: CursorPayload = { page: 1, perPage: 20, total: count, sort,
 
   <SortBar sort={sort} baseUrl="/" variant="tabs" />
 
-  {offline ? (
-    <StashOffline />
+  {syncResult ? (
+    <>
+      {syncResult.items.length === 0 && !syncResult.stashError ? (
+        <StashOffline />
+      ) : (
+        <FeedContainer
+          initialItems={syncResult.items}
+          initialCursor={encodeCursor(syncResult.cursorPayload)}
+          initialNextCursor={nextCursor(syncResult.cursorPayload)}
+          initialTotal={syncResult.count}
+          sort={sort}
+        />
+      )}
+      {syncResult.stashError && (
+        <script>
+          document.addEventListener("astro:page-load", () => {
+            window.dispatchEvent(new CustomEvent("substash:toast", {
+              detail: { message: "Couldn't reach Stash", duration: 5000, variant: "error" }
+            }));
+          }, { once: true });
+        </script>
+      )}
+    </>
   ) : (
-    <FeedContainer
-      initialItems={items}
-      initialCursor={encodeCursor(cursorPayload)}
-      initialNextCursor={nextCursor(cursorPayload)}
-      initialTotal={count}
-      sort={sort}
-    />
+    <>
+      <div id="feed-skeleton" class="p-4 space-y-4">
+        <div class="skeleton-shimmer w-full rounded-xl" style="aspect-ratio: 16/9" />
+        <div class="skeleton-shimmer h-4 w-2/3" />
+        <div class="skeleton-shimmer h-3 w-1/3 opacity-60" />
+        <div class="h-5" />
+        <div class="skeleton-shimmer w-full rounded-xl" style="aspect-ratio: 16/9" />
+        <div class="skeleton-shimmer h-4 w-3/5" />
+        <div class="skeleton-shimmer h-3 w-1/3 opacity-60" />
+        <div class="h-5" />
+        <div class="skeleton-shimmer w-full rounded-xl" style="aspect-ratio: 4/3" />
+        <div class="skeleton-shimmer h-4 w-1/2" />
+        <div class="skeleton-shimmer h-3 w-1/3 opacity-60" />
+      </div>
+      <FeedContent dataPromise={dataPromise!} sort={sort} />
+    </>
   )}
 
   <BottomNav slot="nav" />
@@ -118,13 +186,3 @@ const cursorPayload: CursorPayload = { page: 1, perPage: 20, total: count, sort,
     document.cookie = `substash-sort=${sort}; path=/; max-age=31536000; SameSite=Strict`;
   });
 </script>
-
-{stashError && (
-  <script>
-    document.addEventListener("astro:page-load", () => {
-      window.dispatchEvent(new CustomEvent("substash:toast", {
-        detail: { message: "Couldn't reach Stash", duration: 5000, variant: "error" }
-      }));
-    }, { once: true });
-  </script>
-)}
