@@ -18,7 +18,13 @@ export const GET: APIRoute = async ({ request }) => {
   const pinHash = getSetting("pin_hash");
   if (!pinHash) return Response.json({ valid: false }, { status: 401 });
 
+  const sessionHours = parseInt(getSetting("session_hours") ?? "0", 10);
   const shareSecret = import.meta.env.SHARE_SECRET ?? "substash-default-secret";
-  const valid = await validateSessionToken(token, pinHash, shareSecret);
+  const valid = await validateSessionToken(
+    token,
+    pinHash,
+    shareSecret,
+    sessionHours,
+  );
   return Response.json({ valid }, { status: valid ? 200 : 401 });
 };

@@ -49,11 +49,9 @@ async function isValidShareKey(shareKey: string): Promise<boolean> {
 
 export const onRequest = defineMiddleware(
   async ({ request, cookies, redirect }, next) => {
-    // Only enforce when PUBLIC_AUTH_COOKIE_SECURE is explicitly set.
-    // undefined = no auth configured (pure dev, no PIN).
-    // false = auth via cookie without Secure flag (reverse-proxy HTTPS).
-    // true  = auth via cookie with Secure flag (direct HTTPS).
-    if (import.meta.env.PUBLIC_AUTH_COOKIE_SECURE === undefined) return next();
+    // undefined → enforce auth without Secure flag (same as false).
+    // false → auth via cookie without Secure flag (reverse-proxy HTTPS).
+    // true  → auth via cookie with Secure flag (direct HTTPS).
 
     const pinEnabled = getSetting("pin_enabled") === "true";
     if (!pinEnabled) return next();
@@ -78,9 +76,16 @@ export const onRequest = defineMiddleware(
 
     if (!effectiveHash) return next();
 
+    const sessionHours = parseInt(getSetting("session_hours") ?? "0", 10);
+
     if (
       !token ||
-      !(await validateSessionToken(token, effectiveHash, shareSecret))
+      !(await validateSessionToken(
+        token,
+        effectiveHash,
+        shareSecret,
+        sessionHours,
+      ))
     ) {
       if (pathname.startsWith("/api/")) return unauth401();
       return redirect(`/auth?from=${encodeURIComponent(pathname)}`);
