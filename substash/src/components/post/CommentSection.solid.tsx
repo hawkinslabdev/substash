@@ -39,10 +39,7 @@ export default function CommentSection(props: Props) {
       <h2 class="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide pt-4">
         Comments
       </h2>
-      <Show
-        when={!comments.loading}
-        fallback={<CommentSkeleton />}
-      >
+      <Show when={!comments.loading} fallback={<CommentSkeleton />}>
         <Show when={comments.error}>
           <div class="flex items-center justify-between py-1">
             <p class="text-sm text-[var(--color-text-muted)]">
