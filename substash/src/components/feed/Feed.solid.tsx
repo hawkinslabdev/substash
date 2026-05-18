@@ -332,7 +332,11 @@ function FeedInner(props: Props) {
             stroke-width="2.5"
             class="refresh-success"
           >
-            <polyline stroke-linecap="round" stroke-linejoin="round" points="20 6 9 17 4 12" />
+            <polyline
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              points="20 6 9 17 4 12"
+            />
           </svg>
         </Show>
         <Show when={!refreshing() && !refreshed() && pullY() > 8}>
@@ -397,7 +401,9 @@ function FeedInner(props: Props) {
       </For>
 
       {/* Full-page skeleton: no items yet (initial load, refresh, or stash error) */}
-      <Show when={allItems().length === 0 && (query.isLoading || hasStashError())}>
+      <Show
+        when={allItems().length === 0 && (query.isLoading || hasStashError())}
+      >
         <FeedSkeleton />
         <FeedSkeleton />
         <FeedSkeleton />
@@ -410,7 +416,10 @@ function FeedInner(props: Props) {
             <p class="text-xs">Stash unreachable · Retrying in {retryIn()}s</p>
           </Show>
           <button
-            onClick={() => { setRetryIn(null); query.refetch(); }}
+            onClick={() => {
+              setRetryIn(null);
+              query.refetch();
+            }}
             class="text-xs text-[var(--color-accent)] hover:underline min-h-0 h-auto"
           >
             Retry now
