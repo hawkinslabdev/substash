@@ -110,8 +110,10 @@ function FeedInner(props: Props) {
   let touchStartY = 0;
   const [pullY, setPullY] = createSignal(0);
   const [refreshing, setRefreshing] = createSignal(false);
+  const [refreshed, setRefreshed] = createSignal(false);
   // Incrementing this key forces a brand-new random fetch, discarding cached pages.
   const [refreshKey, setRefreshKey] = createSignal(0);
+  const [retryIn, setRetryIn] = createSignal<number | null>(null);
   // Ref so the post-load effect can call the scroll check that's defined in onMount.
   let checkScrollFn: (() => void) | null = null;
 
@@ -148,12 +150,53 @@ function FeedInner(props: Props) {
     initialDataUpdatedAt: refreshKey() === 0 ? Date.now() : undefined,
   }));
 
+  const hasStashError = () =>
+    query.data?.pages.some((p) => p.stashError) ?? false;
+
+  // Auto-retry countdown: 60s after Stash reports an error.
+  // Resets whenever a fetch is in-flight or the error clears.
+  createEffect(() => {
+    if (!hasStashError() || query.isFetching) {
+      setRetryIn(null);
+      return;
+    }
+    setRetryIn(60);
+    const id = setInterval(() => {
+      setRetryIn((n) => {
+        if (n === null || n <= 1) {
+          clearInterval(id);
+          query.refetch();
+          return null;
+        }
+        return n - 1;
+      });
+    }, 1000);
+    onCleanup(() => {
+      clearInterval(id);
+      setRetryIn(null);
+    });
+  });
+
   // Clear the pull-to-refresh spinner once the new query finishes loading.
   createEffect(() => {
     if (refreshing() && !query.isFetching) {
       setRefreshing(false);
     }
   });
+
+  // Flash a success check when pull-to-refresh completes.
+  createEffect(
+    on(
+      () => refreshing(),
+      (isRefreshing, wasRefreshing) => {
+        if (!isRefreshing && wasRefreshing) {
+          setRefreshed(true);
+          setTimeout(() => setRefreshed(false), 700);
+        }
+      },
+      { defer: true },
+    ),
+  );
 
   // After each page load, re-check scroll position. New items increase scrollHeight
   // but leave scrollTop unchanged — progress drops below the threshold and no scroll
@@ -272,14 +315,27 @@ function FeedInner(props: Props) {
       <div
         class="flex items-center justify-center overflow-hidden"
         style={{
-          height: refreshing() ? "56px" : `${pullY()}px`,
+          height: refreshing() ? "56px" : refreshed() ? "40px" : `${pullY()}px`,
           transition: pullY() === 0 ? "height 300ms ease" : "none",
         }}
       >
         <Show when={refreshing()}>
           <div class="w-5 h-5 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin" />
         </Show>
-        <Show when={!refreshing() && pullY() > 8}>
+        <Show when={refreshed()}>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--color-accent)"
+            stroke-width="2.5"
+            class="refresh-success"
+          >
+            <polyline stroke-linecap="round" stroke-linejoin="round" points="20 6 9 17 4 12" />
+          </svg>
+        </Show>
+        <Show when={!refreshing() && !refreshed() && pullY() > 8}>
           <svg
             width="20"
             height="20"
@@ -340,10 +396,26 @@ function FeedInner(props: Props) {
         )}
       </For>
 
-      {/* Loading skeleton — shimmer, shown after refresh */}
-      <Show when={query.isLoading && refreshKey() > 0}>
+      {/* Full-page skeleton: no items yet (initial load, refresh, or stash error) */}
+      <Show when={allItems().length === 0 && (query.isLoading || hasStashError())}>
         <FeedSkeleton />
         <FeedSkeleton />
+        <FeedSkeleton />
+      </Show>
+
+      {/* Retry countdown shown below skeletons when Stash is unreachable */}
+      <Show when={hasStashError() && !query.isFetching}>
+        <div class="flex flex-col items-center gap-2 py-4 text-[var(--color-text-muted)]">
+          <Show when={retryIn() !== null}>
+            <p class="text-xs">Stash unreachable · Retrying in {retryIn()}s</p>
+          </Show>
+          <button
+            onClick={() => { setRetryIn(null); query.refetch(); }}
+            class="text-xs text-[var(--color-accent)] hover:underline min-h-0 h-auto"
+          >
+            Retry now
+          </button>
+        </div>
       </Show>
 
       <Show when={query.isFetchingNextPage}>
@@ -355,7 +427,7 @@ function FeedInner(props: Props) {
       <Show
         when={!query.hasNextPage && allItems().length > 0 && !query.isLoading}
       >
-        <div class="flex flex-col items-center gap-2 py-10 text-[var(--color-text-muted)]">
+        <div class="end-of-feed-appear flex flex-col items-center gap-2 py-10 text-[var(--color-text-muted)]">
           <svg
             width="20"
             height="20"
@@ -369,6 +441,7 @@ function FeedInner(props: Props) {
               stroke-linecap="round"
               stroke-linejoin="round"
               points="20 6 9 17 4 12"
+              class="checkmark-draw"
             />
           </svg>
           <p class="text-xs font-medium">{endMessage()}</p>

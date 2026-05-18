@@ -1,7 +1,12 @@
-import { createSignal } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import { cn } from "@/lib/utils/cn";
 import { formatCount } from "@/lib/utils/format";
 import { showToast } from "@/lib/utils/toast";
+
+const PARTICLES = [0, 45, 90, 135, 180, 225, 270, 315].map((deg) => ({
+  x: Math.round(Math.cos((deg * Math.PI) / 180) * 24),
+  y: Math.round(Math.sin((deg * Math.PI) / 180) * 24),
+}));
 
 interface Props {
   sceneId?: string;
@@ -58,35 +63,52 @@ export default function VoteButton(props: Props) {
   }
 
   return (
-    <button
-      onClick={handleVote}
-      disabled={pending()}
-      aria-label={props.label ?? "Vote"}
-      class={cn(
-        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-        "border border-[var(--color-border)] active:scale-95",
-        bursting() && "vote-pop",
-        voted()
-          ? "bg-[var(--color-accent)] border-[var(--color-accent)] text-white"
-          : "bg-[var(--color-surface-3)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
-        pending() && "opacity-60 cursor-not-allowed",
-      )}
-    >
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill={voted() ? "currentColor" : "none"}
-        stroke="currentColor"
-        stroke-width="2.5"
+    <div class="relative inline-flex shrink-0">
+      <button
+        onClick={handleVote}
+        disabled={pending()}
+        aria-label={props.label ?? "Vote"}
+        class={cn(
+          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+          "border border-[var(--color-border)] active:scale-95",
+          bursting() && "vote-pop",
+          voted()
+            ? "bg-[var(--color-accent)] border-[var(--color-accent)] text-white"
+            : "bg-[var(--color-surface-3)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
+          pending() && "opacity-60 cursor-not-allowed",
+        )}
       >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M12 19V5M5 12l7-7 7 7"
-        />
-      </svg>
-      {formatCount(count())}
-    </button>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill={voted() ? "currentColor" : "none"}
+          stroke="currentColor"
+          stroke-width="2.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 19V5M5 12l7-7 7 7"
+          />
+        </svg>
+        {formatCount(count())}
+      </button>
+      <Show when={bursting()}>
+        <For each={PARTICLES}>
+          {(p) => (
+            <span
+              class="vote-particle"
+              style={
+                { "--px": `${p.x}px`, "--py": `${p.y}px` } as Record<
+                  string,
+                  string
+                >
+              }
+            />
+          )}
+        </For>
+      </Show>
+    </div>
   );
 }
