@@ -14,7 +14,17 @@ async function fetchComments(stashId: string): Promise<Comment[]> {
   const res = await fetch(
     `/api/comments?stashId=${encodeURIComponent(stashId)}`,
   );
+  if (!res.ok) throw new Error(res.statusText);
   return res.json();
+}
+
+function CommentSkeleton() {
+  return (
+    <div class="space-y-2">
+      <div class="skeleton-shimmer h-14 rounded-lg" />
+      <div class="skeleton-shimmer h-10 rounded-lg opacity-60 ml-4" />
+    </div>
+  );
 }
 
 export default function CommentSection(props: Props) {
@@ -31,16 +41,29 @@ export default function CommentSection(props: Props) {
       </h2>
       <Show
         when={!comments.loading}
-        fallback={
-          <p class="text-sm text-[var(--color-text-muted)]">Loading…</p>
-        }
+        fallback={<CommentSkeleton />}
       >
-        <Show
-          when={(comments() ?? []).length > 0}
-          fallback={
+        <Show when={comments.error}>
+          <div class="flex items-center justify-between py-1">
             <p class="text-sm text-[var(--color-text-muted)]">
-              Be the first to comment.
+              Couldn't load comments.
             </p>
+            <button
+              onClick={() => setRefetchKey((k) => k + 1)}
+              class="text-xs text-[var(--color-accent)] hover:underline min-h-0 h-auto"
+            >
+              Retry
+            </button>
+          </div>
+        </Show>
+        <Show
+          when={!comments.error && (comments() ?? []).length > 0}
+          fallback={
+            <Show when={!comments.error}>
+              <p class="text-sm text-[var(--color-text-muted)]">
+                Be the first to comment.
+              </p>
+            </Show>
           }
         >
           <CommentThread

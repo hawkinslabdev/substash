@@ -212,6 +212,8 @@ function FeedInner(props: Props) {
   );
 
   onMount(() => {
+    document.querySelector("[data-feed-skeleton]")?.remove();
+
     // Scroll-based prefetch: triggers at 70% of loaded content height.
     // This ensures the next page is in flight well before the user hits the
     // last item, avoiding any visible stall.
