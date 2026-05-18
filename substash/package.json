@@ -8,6 +8,7 @@
     "start": "node server.mjs",
     "preview": "astro preview --port 9456",
     "lint": "prettier --check .",
+    "check": "astro check && tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "codegen": "tsx scripts/codegen.ts",
