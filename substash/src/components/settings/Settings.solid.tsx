@@ -860,7 +860,7 @@ export default function Settings(props: Props) {
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             <span class="text-xs text-[var(--color-text-muted)]">
-              hawkinslabdev/substash
+              substash
             </span>
             <svg
               width="14"
