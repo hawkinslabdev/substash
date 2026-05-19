@@ -859,9 +859,7 @@ export default function Settings(props: Props) {
             <p class="text-sm text-[var(--color-text)]">Source code</p>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
-            <span class="text-xs text-[var(--color-text-muted)]">
-              substash
-            </span>
+            <span class="text-xs text-[var(--color-text-muted)]">substash</span>
             <svg
               width="14"
               height="14"
