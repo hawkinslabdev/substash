@@ -26,6 +26,11 @@ const navSections = [
         label: "Discover",
         svg: `<circle cx="12" cy="12" r="10"/><polygon stroke-linecap="round" stroke-linejoin="round" points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>`,
       },
+      {
+        href: "/search",
+        label: "Search",
+        svg: `<circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/>`,
+      },
     ],
   },
   {
@@ -78,11 +83,12 @@ const navSections = [
 const mobileLinks = [
   navSections[0].links[0], // Home
   navSections[0].links[1], // Discover
-  navSections[1].links[0], // Tags
+  navSections[0].links[2], // Search
   navSections[1].links[1], // Performers / Creators / Authors / Stars
 ];
 
 const drawerLinks = [
+  navSections[1].links[0], // Tags (moved from mobile)
   navSections[1].links[2], // Studios
   navSections[2].links[0], // Likes
   navSections[2].links[1], // Comments

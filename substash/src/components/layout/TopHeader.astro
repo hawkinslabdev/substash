@@ -96,9 +96,17 @@
 
 <script>
   function initSearch() {
+    // Sync input value with current search query when on /search page
+    const input = document.querySelector<HTMLInputElement>('#header-search-form input[name="q"]');
+    if (input) {
+      input.value = location.pathname === '/search'
+        ? (new URLSearchParams(location.search).get('q') ?? '')
+        : '';
+    }
+
     document.getElementById('header-search-form')?.addEventListener('submit', (e) => {
-      const input = (e.currentTarget as HTMLFormElement).querySelector<HTMLInputElement>('input[name="q"]');
-      if (!input?.value.trim()) e.preventDefault();
+      const inp = (e.currentTarget as HTMLFormElement).querySelector<HTMLInputElement>('input[name="q"]');
+      if (!inp?.value.trim()) e.preventDefault();
     });
   }
   initSearch();
