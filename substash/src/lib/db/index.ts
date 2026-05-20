@@ -28,7 +28,10 @@ function initializeDatabase() {
   // Run migrations on startup
   try {
     migrate(db, { migrationsFolder: "./migrations" });
-    console.log("[app] Database migrations completed.");
+    console.log(
+      new Date().toTimeString().slice(0, 8),
+      "[app] Database migrations completed.",
+    );
   } catch (error) {
     console.error("Failed to run database migrations:", error);
     process.exit(1);

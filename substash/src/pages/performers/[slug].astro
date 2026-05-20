@@ -80,6 +80,7 @@ if (DEMO_MODE) {
   }
 
   items = interleaved;
+  // count = unfiltered total from Stash — used for cursor/pagination
   count = scenesData.findScenes.count + imagesData.findImages.count;
 } catch {
   offline = true;
@@ -99,7 +100,7 @@ const displayName = performer?.name ?? slug;
       </a>
       {performer?.image_path && (
         <BlurHash
-          src={proxyImage(performer.image_path)}
+          src={proxyImage(performer.image_path!)}
           alt={displayName}
           width={32}
           height={32}
@@ -113,23 +114,19 @@ const displayName = performer?.name ?? slug;
 
   <SortBar sort={sort} baseUrl={`/performers/${slug}`} />
 
-  {offline ? <StashOffline /> : (
-    <>
-      {count > 0 ? (
-        <FeedContainer
-          initialItems={items}
-          initialCursor={encodeCursor(cursorPayload)}
-          initialNextCursor={nextCursor(cursorPayload)}
-          initialTotal={count}
-          sort={sort}
-          performerId={slug}
-        />
-      ) : (
-        <div class="flex flex-col items-center justify-center py-16 text-[var(--color-text-muted)]">
-          <p class="text-sm">No content found</p>
-        </div>
-      )}
-    </>
+  {offline ? <StashOffline /> : items.length > 0 ? (
+    <FeedContainer
+      initialItems={items}
+      initialCursor={encodeCursor(cursorPayload)}
+      initialNextCursor={nextCursor(cursorPayload)}
+      initialTotal={count}
+      sort={sort}
+      performerId={slug}
+    />
+  ) : (
+    <div class="flex flex-col items-center justify-center py-16 gap-1 text-[var(--color-text-muted)]">
+      <p class="text-sm">{count > 0 ? "Nothing to be seen here..." : "No content found..."}</p>
+    </div>
   )}
 
   <BottomNav slot="nav" />

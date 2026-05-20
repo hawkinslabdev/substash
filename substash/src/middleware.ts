@@ -4,6 +4,11 @@ import { settings, shareLinks } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { validateSessionToken, SESSION_COOKIE } from "@/lib/auth/session";
 import { hmacSha256hex, timingSafeEqual, sha256hex } from "@/lib/utils/crypto";
+import { scheduleSearchSync } from "@/lib/search/sync";
+
+// Start cron-based search index sync (runs on app launch + every 6 hours).
+// Guarded inside scheduleSearchSync with a globalThis flag — safe under HMR.
+scheduleSearchSync();
 
 // Static/non-data paths that are always public
 const PAGE_BYPASS = [

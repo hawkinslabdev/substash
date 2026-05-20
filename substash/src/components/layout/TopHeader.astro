@@ -96,17 +96,36 @@
 
 <script>
   function initSearch() {
+    const form = document.getElementById('header-search-form') as HTMLFormElement | null;
+
     // Sync input value with current search query when on /search page
-    const input = document.querySelector<HTMLInputElement>('#header-search-form input[name="q"]');
+    const input = form?.querySelector<HTMLInputElement>('input[name="q"]');
     if (input) {
       input.value = location.pathname === '/search'
         ? (new URLSearchParams(location.search).get('q') ?? '')
         : '';
     }
 
-    document.getElementById('header-search-form')?.addEventListener('submit', (e) => {
+    form?.addEventListener('submit', (e) => {
       const inp = (e.currentTarget as HTMLFormElement).querySelector<HTMLInputElement>('input[name="q"]');
-      if (!inp?.value.trim()) e.preventDefault();
+      if (!inp?.value.trim()) { e.preventDefault(); return; }
+
+      // Carry active filter tab forward when re-searching on /search
+      if (location.pathname === '/search') {
+        const filter = new URLSearchParams(location.search).get('filter');
+        let hidden = form.querySelector<HTMLInputElement>('input[name="filter"]');
+        if (filter && filter !== 'all') {
+          if (!hidden) {
+            hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'filter';
+            form.appendChild(hidden);
+          }
+          hidden.value = filter;
+        } else {
+          hidden?.remove();
+        }
+      }
     });
   }
   initSearch();

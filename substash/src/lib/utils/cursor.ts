@@ -7,6 +7,8 @@ export type CursorPayload = {
   tagId?: string;
   studioId?: string;
   performerId?: string;
+  q?: string;
+  mediaType?: string;
 };
 
 export function encodeCursor(payload: CursorPayload): string {
