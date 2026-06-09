@@ -104,6 +104,57 @@ export function searchMedia(
   return { items, total: countRow?.n ?? 0, hasMore };
 }
 
+// ── Subreddit exact-match browse ─────────────────────────────────────────────
+
+export function searchBySubreddit(
+  subreddit: string,
+  filter: "all" | "scenes" | "images",
+  sort: "date" | "rating" | "random",
+  page: number,
+): SearchResult {
+  const offset = (page - 1) * PER_PAGE;
+  const typeFilter =
+    filter === "scenes"
+      ? "AND media_type = 'scene'"
+      : filter === "images"
+        ? "AND media_type = 'image'"
+        : "";
+
+  const orderBy =
+    sort === "rating"
+      ? "ORDER BY CAST(json_extract(feed_data, '$.o_counter') AS INTEGER) DESC NULLS LAST, indexed_at DESC"
+      : sort === "random"
+        ? "ORDER BY RANDOM()"
+        : "ORDER BY json_extract(feed_data, '$.date') DESC NULLS LAST, indexed_at DESC";
+
+  const rows = rawDb
+    .prepare<[string, number, number], { feed_data: string }>(
+      `SELECT feed_data
+       FROM search_cache
+       WHERE subreddit = ?
+       ${typeFilter}
+       ${orderBy}
+       LIMIT ? OFFSET ?`,
+    )
+    .all(subreddit, PER_PAGE + 1, offset);
+
+  const countRow = rawDb
+    .prepare<[string], { n: number }>(
+      `SELECT COUNT(*) as n
+       FROM search_cache
+       WHERE subreddit = ?
+       ${typeFilter}`,
+    )
+    .get(subreddit);
+
+  const hasMore = rows.length > PER_PAGE;
+  const items = rows
+    .slice(0, PER_PAGE)
+    .map((r) => JSON.parse(r.feed_data) as FeedItem);
+
+  return { items, total: countRow?.n ?? 0, hasMore };
+}
+
 // ── Entity search (tags / performers / studios) ───────────────────────────────
 // Uses LIKE rather than FTS5 — entity tables are small (hundreds to low thousands)
 // and LIKE works immediately after insert without needing an FTS rebuild.

@@ -5,6 +5,8 @@ import SearchResults from "@/components/search/SearchResults.solid";
 import { db } from "@/lib/db";
 import { settings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { formatOriginDisplay } from "@/lib/utils/subreddit";
+import { getFeedSettings } from "@/lib/settings/feed";
 
 function getSetting(key: string, fallback: string): string {
   return db.select().from(settings).where(eq(settings.key, key)).get()?.value ?? fallback;
@@ -12,6 +14,13 @@ function getSetting(key: string, fallback: string): string {
 
 const q = Astro.url.searchParams.get("q")?.trim() ?? "";
 const initialFilter = Astro.url.searchParams.get("filter") ?? "all";
+const r = Astro.url.searchParams.get("r")?.trim() ?? "";
+const user = Astro.url.searchParams.get("user")?.trim() ?? "";
+const rawSubreddit = user ? `u_${user}` : r;
+const { showPrefix } = getFeedSettings();
+const subDisplay = rawSubreddit
+  ? formatOriginDisplay(rawSubreddit, rawSubreddit, showPrefix)
+  : "";
 const pageNameTags = getSetting("page_name_tags", "Tags");
 const pageNamePerformers = getSetting("page_name_performers", "Creators");
 const pageNameStudios = getSetting("page_name_studios", "Studios");
@@ -44,33 +53,44 @@ const browseLinks = [
 ];
 ---
 
-<PageShell title={q ? `Search: ${q} — Substash` : "Substash: Search"}>
-  <!-- Mobile-only sticky header with search input -->
-  <header class="lg:hidden sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/95 backdrop-blur border-b border-[var(--color-border)] flex items-center gap-3">
-    <button onclick="history.back()" aria-label="Go back" class="text-[var(--color-text-muted)] shrink-0">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/>
-      </svg>
-    </button>
-    <form id="mobile-search-form" action="/search" method="get" class="flex-1" autocomplete="off">
-      <div class="relative">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-          class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-accent)] pointer-events-none">
-          <circle cx="11" cy="11" r="8"/>
-          <path stroke-linecap="round" d="m21 21-4.35-4.35"/>
+<PageShell title={rawSubreddit ? `${subDisplay} — Substash` : q ? `Search: ${q} — Substash` : "Substash: Search"}>
+  <!-- Mobile-only sticky header -->
+  {rawSubreddit ? (
+    <header class="lg:hidden sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/95 backdrop-blur border-b border-[var(--color-border)] flex items-center gap-3">
+      <button onclick="history.back()" aria-label="Go back" class="text-[var(--color-text-muted)] shrink-0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/>
         </svg>
-        <input
-          id="mobile-search-input"
-          type="text"
-          name="q"
-          value={q}
-          placeholder="Search Substash…"
-          autocomplete="off"
-          class="w-full h-9 pl-9 pr-4 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-3)] text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]/50 transition-colors"
-        />
-      </div>
-    </form>
-  </header>
+      </button>
+      <p class="text-sm font-semibold text-[var(--color-accent)] truncate">{subDisplay}</p>
+    </header>
+  ) : (
+    <header class="lg:hidden sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/95 backdrop-blur border-b border-[var(--color-border)] flex items-center gap-3">
+      <button onclick="history.back()" aria-label="Go back" class="text-[var(--color-text-muted)] shrink-0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/>
+        </svg>
+      </button>
+      <form id="mobile-search-form" action="/search" method="get" class="flex-1" autocomplete="off">
+        <div class="relative">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-accent)] pointer-events-none">
+            <circle cx="11" cy="11" r="8"/>
+            <path stroke-linecap="round" d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            id="mobile-search-input"
+            type="text"
+            name="q"
+            value={q}
+            placeholder="Search Substash…"
+            autocomplete="off"
+            class="w-full h-9 pl-9 pr-4 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-3)] text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]/50 transition-colors"
+          />
+        </div>
+      </form>
+    </header>
+  )}
 
   <SearchResults
     client:only="solid-js"
@@ -80,6 +100,8 @@ const browseLinks = [
     pageNameTags={pageNameTags}
     pageNamePerformers={pageNamePerformers}
     pageNameStudios={pageNameStudios}
+    initialSubreddit={rawSubreddit || undefined}
+    initialSubredditDisplay={subDisplay || undefined}
   />
 
   <BottomNav slot="nav" />

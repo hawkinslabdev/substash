@@ -83,7 +83,10 @@ const {
       document.addEventListener('astro:page-load', () => {
         const targetY = pendingRestore;
         pendingRestore = null;
-        if (!targetY) return;
+        if (!targetY) {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+          return;
+        }
 
         function tryScroll(): boolean {
           if (document.documentElement.scrollHeight >= targetY + window.innerHeight * 0.5) {

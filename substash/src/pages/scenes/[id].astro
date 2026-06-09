@@ -52,6 +52,13 @@ const sub = resolveTitle(scene.title, scene.files?.[0]?.path, null, {
 });
 const displayTitle = sub.cleanTitle || "Untitled";
 const originDisplay = formatOriginDisplay(sub.origin, sub.displayName, getFeedSettings().showPrefix);
+const originQuery = sub.isExtracted ? sub.subreddit : null;
+const isUserSub = originQuery?.startsWith("u_") ?? false;
+const originHref = originQuery
+  ? isUserSub
+    ? `/search?user=${encodeURIComponent(originQuery.slice(2))}`
+    : `/search?r=${encodeURIComponent(originQuery)}`
+  : "/discover";
 const creditLine = sub.credit;
 const dayDisplay = sub.day;
 ---
@@ -126,9 +133,7 @@ const dayDisplay = sub.day;
 
     <div class="flex flex-col gap-0.5">
       <a
-        href={`#`}
-        target="_blank"
-        rel="noopener noreferrer"
+        href={originHref}
         class="inline-flex items-center text-xs font-medium text-[var(--color-accent)] hover:opacity-75 transition-opacity"
       >
         {originDisplay}

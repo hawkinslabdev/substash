@@ -82,6 +82,22 @@ async function fetchSearchPage(
   return res.json();
 }
 
+async function fetchSubredditPage(
+  cursor: string | null,
+  subreddit: string,
+  type: "all" | "scenes" | "images",
+  sort: string,
+): Promise<PageResult> {
+  const url = new URL("/api/stash/search", location.origin);
+  url.searchParams.set("subreddit", subreddit);
+  url.searchParams.set("type", type);
+  url.searchParams.set("sort", sort);
+  if (cursor) url.searchParams.set("cursor", cursor);
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error("Search failed");
+  return res.json();
+}
+
 async function fetchSyncStatus(): Promise<SyncStatus> {
   const res = await fetch("/api/search/sync-status");
   if (!res.ok) throw new Error("Status check failed");
@@ -343,6 +359,8 @@ interface Props {
   pageNameTags?: string;
   pageNamePerformers?: string;
   pageNameStudios?: string;
+  initialSubreddit?: string;
+  initialSubredditDisplay?: string;
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -364,8 +382,17 @@ function SearchResultsInner(props: Props) {
       : "all"
   ) as FilterType;
 
+  const isSubredditMode = () => !!props.initialSubreddit;
+
   const [q, setQ] = createSignal(initial);
   const [filter, setFilter] = createSignal<FilterType>(initialFilter);
+  const [subFilter, setSubFilter] = createSignal<"all" | "scenes" | "images">(
+    "all",
+  );
+  const [subSort, setSubSort] = createSignal<"date" | "rating" | "random">(
+    "date",
+  );
+  const [sortOpen, setSortOpen] = createSignal(false);
   const [recent, setRecent] = createSignal<string[]>([]);
   const [isSyncing, setIsSyncing] = createSignal(false);
 
@@ -375,6 +402,13 @@ function SearchResultsInner(props: Props) {
       pushRecent(initial);
       setRecent(getRecent());
     }
+    // Close sort dropdown on outside click
+    function onOutsideClick(e: MouseEvent) {
+      const dd = document.getElementById("sub-sort-dd");
+      if (dd && !dd.contains(e.target as Node)) setSortOpen(false);
+    }
+    document.addEventListener("click", onOutsideClick);
+    onCleanup(() => document.removeEventListener("click", onOutsideClick));
   });
 
   // Sync q+filter when Astro form navigates (popstate) or back/forward
@@ -390,8 +424,9 @@ function SearchResultsInner(props: Props) {
     onCleanup(() => window.removeEventListener("popstate", onPopState));
   });
 
-  // Persist filter in URL so refresh/share keeps the active tab
+  // Persist filter in URL (text search mode only)
   createEffect(() => {
+    if (isSubredditMode()) return;
     const f = filter();
     const url = new URL(location.href);
     if (f === "all") url.searchParams.delete("filter");
@@ -407,7 +442,23 @@ function SearchResultsInner(props: Props) {
       fetchSearchPage(pageParam as string | null, q(), filter()),
     initialPageParam: null as string | null,
     getNextPageParam: (last: PageResult) => last.nextCursor ?? undefined,
-    enabled: q().length >= MIN_Q,
+    enabled: !isSubredditMode() && q().length >= MIN_Q,
+  }));
+
+  // ── Subreddit browse query ─────────────────────────────────────────────────
+
+  const subredditQuery = createInfiniteQuery(() => ({
+    queryKey: ["subreddit", props.initialSubreddit, subFilter(), subSort()],
+    queryFn: ({ pageParam }) =>
+      fetchSubredditPage(
+        pageParam as string | null,
+        props.initialSubreddit!,
+        subFilter(),
+        subSort(),
+      ),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last: PageResult) => last.nextCursor ?? undefined,
+    enabled: isSubredditMode(),
   }));
 
   // ── Sync status polling ────────────────────────────────────────────────────
@@ -421,7 +472,9 @@ function SearchResultsInner(props: Props) {
   }));
 
   createEffect(() => {
-    const syncing = searchQuery.data?.pages.some((p) => p.syncing) ?? false;
+    const syncing = isSubredditMode()
+      ? (subredditQuery.data?.pages.some((p) => p.syncing) ?? false)
+      : (searchQuery.data?.pages.some((p) => p.syncing) ?? false);
     setIsSyncing(syncing);
   });
 
@@ -429,7 +482,11 @@ function SearchResultsInner(props: Props) {
     const s = syncStatus.data;
     if (s && isSyncing() && !s.inProgress && !s.isEmpty) {
       setIsSyncing(false);
-      queryClient.invalidateQueries({ queryKey: ["search"] });
+      if (isSubredditMode()) {
+        queryClient.invalidateQueries({ queryKey: ["subreddit"] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["search"] });
+      }
     }
   });
 
@@ -443,12 +500,14 @@ function SearchResultsInner(props: Props) {
       requestAnimationFrame(() => {
         raf = false;
         const el = document.documentElement;
-        if (
-          (el.scrollTop + el.clientHeight) / el.scrollHeight >= 0.7 &&
-          searchQuery.hasNextPage &&
-          !searchQuery.isFetchingNextPage
-        )
-          searchQuery.fetchNextPage();
+        if ((el.scrollTop + el.clientHeight) / el.scrollHeight < 0.7) return;
+        if (isSubredditMode()) {
+          if (subredditQuery.hasNextPage && !subredditQuery.isFetchingNextPage)
+            subredditQuery.fetchNextPage();
+        } else {
+          if (searchQuery.hasNextPage && !searchQuery.isFetchingNextPage)
+            searchQuery.fetchNextPage();
+        }
       });
     }
     window.addEventListener("scroll", check, { passive: true });
@@ -464,6 +523,10 @@ function SearchResultsInner(props: Props) {
   const allComments = () =>
     (searchQuery.data?.pages ?? []).flatMap((p) => p.commentHits ?? []);
   const totalCount = () => searchQuery.data?.pages[0]?.total ?? 0;
+
+  const subItems = () =>
+    (subredditQuery.data?.pages ?? []).flatMap((p) => p.items) as FeedItem[];
+  const subTotal = () => subredditQuery.data?.pages[0]?.total ?? 0;
 
   const isEntityFilter = () =>
     filter() === "tags" || filter() === "performers" || filter() === "studios";
@@ -493,7 +556,7 @@ function SearchResultsInner(props: Props) {
     return allItems().length > 0;
   };
 
-  // ── Filter tabs (dynamic labels from settings) ─────────────────────────────
+  // ── Filter tabs ────────────────────────────────────────────────────────────
 
   const tabs = () => [
     { value: "all" as FilterType, label: "All" },
@@ -511,20 +574,92 @@ function SearchResultsInner(props: Props) {
     { value: "comments" as FilterType, label: "Comments" },
   ];
 
+  const subTabs = () => [
+    { value: "all" as const, label: "All" },
+    { value: "scenes" as const, label: "Videos" },
+    { value: "images" as const, label: "Photos" },
+  ];
+
+  const SORT_OPTIONS = [
+    { key: "date" as const, label: "Recent" },
+    { key: "rating" as const, label: "Top" },
+    { key: "random" as const, label: "Random" },
+  ];
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div>
-      {/* Filter tabs — pinned below the mobile Astro header / desktop sidebar top */}
-      <Show when={q().length >= MIN_Q}>
+      {/* Filter tabs */}
+      <Show
+        when={isSubredditMode()}
+        fallback={
+          <Show when={q().length >= MIN_Q}>
+            <div class="sticky top-[57px] lg:top-0 z-10 bg-[var(--color-surface)]/95 backdrop-blur border-b border-[var(--color-border)]">
+              <div class="flex items-center gap-1.5 px-4 py-2.5 overflow-x-auto scrollbar-hide">
+                <For each={tabs()}>
+                  {(tab) => (
+                    <button
+                      onClick={() => setFilter(tab.value)}
+                      class={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                        filter() === tab.value
+                          ? "bg-[var(--color-accent)] text-white"
+                          : "bg-[var(--color-surface-3)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  )}
+                </For>
+                <Show when={totalCount() > 0 && !searchQuery.isLoading}>
+                  <span class="ml-auto shrink-0 text-xs text-[var(--color-text-muted)] pr-1">
+                    {totalCount().toLocaleString()}
+                  </span>
+                </Show>
+              </div>
+            </div>
+          </Show>
+        }
+      >
         <div class="sticky top-[57px] lg:top-0 z-10 bg-[var(--color-surface)]/95 backdrop-blur border-b border-[var(--color-border)]">
-          <div class="flex items-center gap-1.5 px-4 py-2.5 overflow-x-auto scrollbar-hide">
-            <For each={tabs()}>
+          {/* Filter indicator row */}
+          <div class="flex items-center gap-2 px-4 pt-3.5 pb-1.5">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="text-[var(--color-accent)] shrink-0"
+            >
+              <polygon
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"
+              />
+            </svg>
+            <span class="text-xs text-[var(--color-text-muted)]">
+              Filtering by
+            </span>
+            <span class="text-xs font-bold text-[var(--color-accent)] truncate">
+              {props.initialSubredditDisplay ?? props.initialSubreddit}
+            </span>
+            <a
+              href="/search"
+              class="ml-auto shrink-0 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            >
+              Clear
+            </a>
+          </div>
+          {/* Type tabs row */}
+          <div class="flex items-center gap-1.5 px-4 pb-2.5 overflow-x-auto scrollbar-hide">
+            <For each={subTabs()}>
               {(tab) => (
                 <button
-                  onClick={() => setFilter(tab.value)}
+                  onClick={() => setSubFilter(tab.value)}
                   class={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                    filter() === tab.value
+                    subFilter() === tab.value
                       ? "bg-[var(--color-accent)] text-white"
                       : "bg-[var(--color-surface-3)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                   }`}
@@ -533,9 +668,9 @@ function SearchResultsInner(props: Props) {
                 </button>
               )}
             </For>
-            <Show when={totalCount() > 0 && !searchQuery.isLoading}>
+            <Show when={subTotal() > 0 && !subredditQuery.isLoading}>
               <span class="ml-auto shrink-0 text-xs text-[var(--color-text-muted)] pr-1">
-                {totalCount().toLocaleString()}
+                {subTotal().toLocaleString()}
               </span>
             </Show>
           </div>
@@ -547,177 +682,139 @@ function SearchResultsInner(props: Props) {
         <SyncingBanner totalIndexed={syncStatus.data?.totalIndexed ?? 0} />
       </Show>
 
-      {/* ── Empty state (no query) ── */}
-      <Show when={showEmpty()}>
-        <div class="px-4 py-4">
-          <Show when={recent().length > 0}>
-            <div class="mb-5">
-              <div class="flex items-center justify-between mb-2">
-                <p class="text-[10px] font-bold tracking-widest text-[var(--color-text-muted)] uppercase">
-                  Recent
-                </p>
-                <button
-                  onClick={() => {
-                    clearRecent();
-                    setRecent([]);
-                  }}
-                  class="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-                >
-                  Clear
-                </button>
-              </div>
-              <div class="flex flex-col gap-0.5">
-                <For each={recent()}>
-                  {(item) => (
-                    <div class="flex items-center group">
-                      <a
-                        href={`/search?q=${encodeURIComponent(item)}`}
-                        class="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-3)] active:scale-[0.98] transition-all"
-                      >
+      {/* ── Subreddit browse mode ── */}
+      <Show when={isSubredditMode()}>
+        {/* Sort bar */}
+        <div class="px-4 py-2 border-b border-[var(--color-border)] flex items-center">
+          <div id="sub-sort-dd" class="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSortOpen(!sortOpen());
+              }}
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:bg-[var(--color-surface-3)] active:scale-95 transition-all cursor-pointer select-none"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                class="text-[var(--color-text-muted)] shrink-0"
+              >
+                <polygon
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"
+                />
+              </svg>
+              <span class="text-[var(--color-text-muted)]">
+                Sort:{" "}
+                <span class="text-[var(--color-text)] font-semibold">
+                  {SORT_OPTIONS.find((s) => s.key === subSort())?.label}
+                </span>
+              </span>
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                class="text-[var(--color-text-muted)] shrink-0"
+                style={{
+                  transform: sortOpen() ? "rotate(180deg)" : "none",
+                  transition: "transform 0.2s",
+                }}
+              >
+                <polyline
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  points="6 9 12 15 18 9"
+                />
+              </svg>
+            </button>
+            <Show when={sortOpen()}>
+              <div class="absolute top-full left-0 mt-1.5 z-50 min-w-[150px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden">
+                <For each={SORT_OPTIONS}>
+                  {(opt) => (
+                    <button
+                      onClick={() => {
+                        setSubSort(opt.key);
+                        setSortOpen(false);
+                      }}
+                      class={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                        subSort() === opt.key
+                          ? "text-[var(--color-accent)] font-semibold bg-[var(--color-surface-2)]"
+                          : "text-[var(--color-text)] hover:bg-[var(--color-surface-2)]"
+                      }`}
+                    >
+                      {opt.label}
+                      <Show when={subSort() === opt.key}>
                         <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          class="text-[var(--color-text-muted)] shrink-0"
-                        >
-                          <polyline
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            points="12 8 12 12 14 14"
-                          />
-                          <circle cx="12" cy="12" r="10" />
-                        </svg>
-                        <span class="text-sm text-[var(--color-text)] truncate">
-                          {item}
-                        </span>
-                      </a>
-                      <button
-                        onClick={() => {
-                          removeRecentItem(item);
-                          setRecent(getRecent());
-                        }}
-                        aria-label={`Remove "${item}"`}
-                        class="opacity-0 group-hover:opacity-100 px-3 py-3 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all"
-                      >
-                        <svg
-                          width="12"
-                          height="12"
+                          width="13"
+                          height="13"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
                           stroke-width="2.5"
+                          class="text-[var(--color-accent)] shrink-0"
                         >
-                          <line
+                          <polyline
                             stroke-linecap="round"
-                            x1="18"
-                            y1="6"
-                            x2="6"
-                            y2="18"
-                          />
-                          <line
-                            stroke-linecap="round"
-                            x1="6"
-                            y1="6"
-                            x2="18"
-                            y2="18"
+                            stroke-linejoin="round"
+                            points="20 6 9 17 4 12"
                           />
                         </svg>
-                      </button>
-                    </div>
+                      </Show>
+                    </button>
                   )}
                 </For>
               </div>
-            </div>
-          </Show>
-
-          <p class="text-[10px] font-bold tracking-widest text-[var(--color-text-muted)] uppercase mb-3">
-            Browse
-          </p>
-          <div class="flex flex-col gap-1">
-            <For each={props.browseLinks}>
-              {({ href, label, desc, svg }) => (
-                <a
-                  href={href}
-                  class="flex items-center gap-3.5 px-4 py-3 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:border-[var(--color-text-muted)]/30 hover:bg-[var(--color-surface-3)] active:scale-[0.98] transition-all"
-                >
-                  <span class="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-surface-3)] text-[var(--color-accent)] shrink-0">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.75"
-                      innerHTML={svg}
-                    />
-                  </span>
-                  <span class="flex-1 min-w-0">
-                    <span class="block text-sm font-medium text-[var(--color-text)]">
-                      {label}
-                    </span>
-                    <span class="block text-xs text-[var(--color-text-muted)]">
-                      {desc}
-                    </span>
-                  </span>
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    class="text-[var(--color-text-muted)] shrink-0"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="m9 18 6-6-6-6"
-                    />
-                  </svg>
-                </a>
-              )}
-            </For>
+            </Show>
           </div>
         </div>
-      </Show>
 
-      {/* Loading skeletons */}
-      <Show when={showLoading()}>
-        <SearchSkeleton />
-        <SearchSkeleton />
-        <SearchSkeleton />
-      </Show>
+        <Show when={subredditQuery.isLoading && subItems().length === 0}>
+          <SearchSkeleton />
+          <SearchSkeleton />
+          <SearchSkeleton />
+        </Show>
 
-      {/* No results */}
-      <Show when={showNoResults()}>
-        <div class="px-4 py-14 flex flex-col items-center gap-2 text-center">
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            class="text-[var(--color-text-muted)] opacity-40"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path stroke-linecap="round" d="m21 21-4.35-4.35" />
-          </svg>
-          <p class="text-sm font-semibold text-[var(--color-text)] mt-1">
-            Nothing found for "{q()}"
-          </p>
-          <p class="text-xs text-[var(--color-text-muted)] max-w-[220px] leading-relaxed">
-            Try different keywords or browse by category.
-          </p>
-        </div>
-      </Show>
+        <Show
+          when={
+            !subredditQuery.isLoading &&
+            !subredditQuery.isFetching &&
+            subItems().length === 0 &&
+            !isSyncing()
+          }
+        >
+          <div class="px-4 py-14 flex flex-col items-center gap-2 text-center">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              class="text-[var(--color-text-muted)] opacity-40"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path stroke-linecap="round" d="m21 21-4.35-4.35" />
+            </svg>
+            <p class="text-sm font-semibold text-[var(--color-text)] mt-1">
+              Nothing from{" "}
+              {props.initialSubredditDisplay ?? props.initialSubreddit}
+            </p>
+            <p class="text-xs text-[var(--color-text-muted)] max-w-[220px] leading-relaxed">
+              Content may not be indexed yet. Try again after the search index
+              syncs.
+            </p>
+          </div>
+        </Show>
 
-      {/* Media results (all / scenes / images) */}
-      <Show when={!isEntityFilter() && filter() !== "comments"}>
-        <For each={allItems()}>
+        <For each={subItems()}>
           {(item) => (
             <Switch>
               <Match when={item.type === "scene"}>
@@ -729,52 +826,271 @@ function SearchResultsInner(props: Props) {
             </Switch>
           )}
         </For>
+
+        <Show when={subredditQuery.isFetchingNextPage}>
+          <SearchSkeleton />
+        </Show>
+
+        <Show
+          when={
+            !subredditQuery.hasNextPage &&
+            !subredditQuery.isLoading &&
+            !subredditQuery.isFetchingNextPage &&
+            subItems().length > 0
+          }
+        >
+          <div class="flex flex-col items-center gap-1 py-10 text-[var(--color-text-muted)]">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="opacity-40"
+            >
+              <polyline
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                points="20 6 9 17 4 12"
+              />
+            </svg>
+            <p class="text-xs font-medium">All posts shown</p>
+          </div>
+        </Show>
       </Show>
 
-      {/* Entity results (tags / performers / studios) */}
-      <Show when={isEntityFilter()}>
-        <For each={allEntities()}>
-          {(entity) => <EntityCard entity={entity} />}
-        </For>
-      </Show>
+      {/* ── Text search mode ── */}
+      <Show when={!isSubredditMode()}>
+        {/* Empty state (no query) */}
+        <Show when={showEmpty()}>
+          <div class="px-4 py-4">
+            <Show when={recent().length > 0}>
+              <div class="mb-5">
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-[10px] font-bold tracking-widest text-[var(--color-text-muted)] uppercase">
+                    Recent
+                  </p>
+                  <button
+                    onClick={() => {
+                      clearRecent();
+                      setRecent([]);
+                    }}
+                    class="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  <For each={recent()}>
+                    {(item) => (
+                      <div class="flex items-center group">
+                        <a
+                          href={`/search?q=${encodeURIComponent(item)}`}
+                          class="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-3)] active:scale-[0.98] transition-all"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            class="text-[var(--color-text-muted)] shrink-0"
+                          >
+                            <polyline
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              points="12 8 12 12 14 14"
+                            />
+                            <circle cx="12" cy="12" r="10" />
+                          </svg>
+                          <span class="text-sm text-[var(--color-text)] truncate">
+                            {item}
+                          </span>
+                        </a>
+                        <button
+                          onClick={() => {
+                            removeRecentItem(item);
+                            setRecent(getRecent());
+                          }}
+                          aria-label={`Remove "${item}"`}
+                          class="opacity-0 group-hover:opacity-100 px-3 py-3 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all"
+                        >
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.5"
+                          >
+                            <line
+                              stroke-linecap="round"
+                              x1="18"
+                              y1="6"
+                              x2="6"
+                              y2="18"
+                            />
+                            <line
+                              stroke-linecap="round"
+                              x1="6"
+                              y1="6"
+                              x2="18"
+                              y2="18"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </div>
+            </Show>
 
-      {/* Comment results */}
-      <Show when={filter() === "comments"}>
-        <For each={allComments()}>{(hit) => <CommentCard hit={hit} />}</For>
-      </Show>
+            <p class="text-[10px] font-bold tracking-widest text-[var(--color-text-muted)] uppercase mb-3">
+              Browse
+            </p>
+            <div class="flex flex-col gap-1">
+              <For each={props.browseLinks}>
+                {({ href, label, desc, svg }) => (
+                  <a
+                    href={href}
+                    class="flex items-center gap-3.5 px-4 py-3 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:border-[var(--color-text-muted)]/30 hover:bg-[var(--color-surface-3)] active:scale-[0.98] transition-all"
+                  >
+                    <span class="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-surface-3)] text-[var(--color-accent)] shrink-0">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.75"
+                        innerHTML={svg}
+                      />
+                    </span>
+                    <span class="flex-1 min-w-0">
+                      <span class="block text-sm font-medium text-[var(--color-text)]">
+                        {label}
+                      </span>
+                      <span class="block text-xs text-[var(--color-text-muted)]">
+                        {desc}
+                      </span>
+                    </span>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      class="text-[var(--color-text-muted)] shrink-0"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="m9 18 6-6-6-6"
+                      />
+                    </svg>
+                  </a>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
 
-      {/* Loading next page */}
-      <Show when={searchQuery.isFetchingNextPage}>
-        <SearchSkeleton />
-      </Show>
+        {/* Loading skeletons */}
+        <Show when={showLoading()}>
+          <SearchSkeleton />
+          <SearchSkeleton />
+          <SearchSkeleton />
+        </Show>
 
-      {/* End of results */}
-      <Show
-        when={
-          !searchQuery.hasNextPage &&
-          !searchQuery.isLoading &&
-          !searchQuery.isFetchingNextPage &&
-          hasResults()
-        }
-      >
-        <div class="flex flex-col items-center gap-1 py-10 text-[var(--color-text-muted)]">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            class="opacity-40"
-          >
-            <polyline
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              points="20 6 9 17 4 12"
-            />
-          </svg>
-          <p class="text-xs font-medium">All results shown</p>
-        </div>
+        {/* No results */}
+        <Show when={showNoResults()}>
+          <div class="px-4 py-14 flex flex-col items-center gap-2 text-center">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              class="text-[var(--color-text-muted)] opacity-40"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path stroke-linecap="round" d="m21 21-4.35-4.35" />
+            </svg>
+            <p class="text-sm font-semibold text-[var(--color-text)] mt-1">
+              Nothing found for "{q()}"
+            </p>
+            <p class="text-xs text-[var(--color-text-muted)] max-w-[220px] leading-relaxed">
+              Try different keywords or browse by category.
+            </p>
+          </div>
+        </Show>
+
+        {/* Media results (all / scenes / images) */}
+        <Show when={!isEntityFilter() && filter() !== "comments"}>
+          <For each={allItems()}>
+            {(item) => (
+              <Switch>
+                <Match when={item.type === "scene"}>
+                  <SceneCard scene={item as SceneFeedItem} />
+                </Match>
+                <Match when={item.type === "image"}>
+                  <ImageCard image={item as unknown as ImageFeedItem} />
+                </Match>
+              </Switch>
+            )}
+          </For>
+        </Show>
+
+        {/* Entity results (tags / performers / studios) */}
+        <Show when={isEntityFilter()}>
+          <For each={allEntities()}>
+            {(entity) => <EntityCard entity={entity} />}
+          </For>
+        </Show>
+
+        {/* Comment results */}
+        <Show when={filter() === "comments"}>
+          <For each={allComments()}>{(hit) => <CommentCard hit={hit} />}</For>
+        </Show>
+
+        {/* Loading next page */}
+        <Show when={searchQuery.isFetchingNextPage}>
+          <SearchSkeleton />
+        </Show>
+
+        {/* End of results */}
+        <Show
+          when={
+            !searchQuery.hasNextPage &&
+            !searchQuery.isLoading &&
+            !searchQuery.isFetchingNextPage &&
+            hasResults()
+          }
+        >
+          <div class="flex flex-col items-center gap-1 py-10 text-[var(--color-text-muted)]">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="opacity-40"
+            >
+              <polyline
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                points="20 6 9 17 4 12"
+              />
+            </svg>
+            <p class="text-xs font-medium">All results shown</p>
+          </div>
+        </Show>
       </Show>
     </div>
   );

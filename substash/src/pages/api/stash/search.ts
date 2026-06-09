@@ -4,6 +4,7 @@ import {
   searchMedia,
   searchEntities,
   searchComments,
+  searchBySubreddit,
   type FilterType,
 } from "@/lib/search/query";
 import { encodeCursor, decodeCursor } from "@/lib/utils/cursor";
@@ -13,8 +14,49 @@ const MIN_QUERY = 2;
 export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url);
   const q = url.searchParams.get("q")?.trim() ?? "";
+  const subreddit = url.searchParams.get("subreddit")?.trim() ?? "";
+  const rawSort = url.searchParams.get("sort") ?? "date";
+  const sort = (
+    ["date", "rating", "random"].includes(rawSort) ? rawSort : "date"
+  ) as "date" | "rating" | "random";
   const type = (url.searchParams.get("type") ?? "all") as FilterType;
   const cursorParam = url.searchParams.get("cursor");
+
+  // Exact subreddit browse — bypasses FTS and MIN_QUERY
+  if (subreddit) {
+    if (isIndexEmpty()) {
+      const state = getSyncState();
+      return json({
+        items: [],
+        entities: [],
+        commentHits: [],
+        nextCursor: null,
+        total: 0,
+        syncing: true,
+        syncInProgress: state.inProgress,
+      });
+    }
+    let page = 1;
+    if (cursorParam) page = decodeCursor(cursorParam).page;
+    const mediaFilter = type === "scenes" || type === "images" ? type : "all";
+    const result = searchBySubreddit(subreddit, mediaFilter, sort, page);
+    return json({
+      items: result.items,
+      entities: [],
+      commentHits: [],
+      nextCursor: result.hasMore
+        ? encodeCursor({
+            page: page + 1,
+            perPage: 20,
+            total: result.total,
+            sort: "subreddit",
+            subreddit,
+            mediaType: type,
+          })
+        : null,
+      total: result.total,
+    });
+  }
 
   if (q.length < MIN_QUERY) {
     return json({

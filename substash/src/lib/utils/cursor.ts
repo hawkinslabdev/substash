@@ -9,6 +9,7 @@ export type CursorPayload = {
   performerId?: string;
   q?: string;
   mediaType?: string;
+  subreddit?: string;
 };
 
 export function encodeCursor(payload: CursorPayload): string {

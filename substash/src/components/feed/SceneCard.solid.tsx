@@ -49,9 +49,19 @@ export default function SceneCard(props: Props) {
     >
       {/* Card header: origin · performer · date */}
       <div class="px-4 pt-3 pb-1.5 flex items-center gap-2">
-        <span class="text-xs font-bold text-[var(--color-accent)] tracking-wide">
+        <a
+          href={
+            scene().subredditExtracted
+              ? scene().subreddit.startsWith("u_")
+                ? `/search?user=${encodeURIComponent(scene().subreddit.slice(2))}`
+                : `/search?r=${encodeURIComponent(scene().subreddit)}`
+              : "/discover"
+          }
+          onClick={(e) => e.stopPropagation()}
+          class="text-xs font-bold text-[var(--color-accent)] tracking-wide hover:opacity-75 transition-opacity"
+        >
           {scene().originDisplay}
-        </span>
+        </a>
         <Show when={scene().metaPerformer}>
           <span
             class="text-xs font-bold text-[var(--color-text-muted)]"

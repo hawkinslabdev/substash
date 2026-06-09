@@ -12,6 +12,7 @@ export interface BaseFeedItem {
   title: string | null;
   subreddit: string;
   subredditDisplay: string;
+  subredditExtracted: boolean;
   originDisplay: string;
   date: string | null;
   studio: { id: string; name: string; image_path: string | null } | null;
@@ -86,6 +87,7 @@ export function sceneToFeedItem(scene: StashScene): SceneFeedItem {
     title: sub.cleanTitle || null,
     subreddit: sub.subreddit,
     subredditDisplay: sub.displayName,
+    subredditExtracted: sub.isExtracted,
     originDisplay: formatOriginDisplay(sub.origin, sub.displayName, showPrefix),
     date: scene.date || scene.created_at?.substring(0, 10) || null,
     studio: normalizeStudio(scene.studio),
@@ -132,6 +134,7 @@ export function imageToFeedItem(image: StashImage): ImageFeedItem {
     title: sub.cleanTitle || null,
     subreddit: sub.subreddit,
     subredditDisplay: sub.displayName,
+    subredditExtracted: sub.isExtracted,
     originDisplay: formatOriginDisplay(sub.origin, sub.displayName, showPrefix),
     date: image.date || image.created_at?.substring(0, 10) || null,
     studio: normalizeStudio(image.studio),
