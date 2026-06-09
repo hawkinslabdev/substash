@@ -220,7 +220,7 @@ export default function Settings(props: Props) {
   }
 
   function updateBox(index: number, value: string) {
-    const clean = value.replace(/[^a-zA-Z0-9]/g, "").slice(-1);
+    const clean = value.replace(/[^0-9]/g, "").slice(-1);
     const next = [...pinBoxes()];
     next[index] = clean;
     setPinBoxes(next);
@@ -410,7 +410,8 @@ export default function Settings(props: Props) {
                 id={`pin-box-${i}`}
                 type="text"
                 maxlength="1"
-                inputmode="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
                 autocomplete="off"
                 value={pinBoxes()[i]}
                 onInput={(e) => updateBox(i, e.currentTarget.value)}

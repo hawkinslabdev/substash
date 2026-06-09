@@ -115,7 +115,7 @@ const from = Astro.url.searchParams.get("from") ?? "/";
 
       boxes.forEach((box, i) => {
         box.addEventListener('input', (e) => {
-          const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(-1);
+          const val = e.target.value.replace(/[^0-9]/g, '').slice(-1);
           e.target.value = val;
           if (val && i < 5) boxes[i + 1].focus();
           if (i === 5 && val) attempt();
@@ -128,7 +128,7 @@ const from = Astro.url.searchParams.get("from") ?? "/";
         });
         box.addEventListener('paste', (e) => {
           e.preventDefault();
-          const text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6);
+          const text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '').slice(0, 6);
           text.split('').forEach((ch, j) => { if (boxes[j]) boxes[j].value = ch; });
           if (text.length === 6) attempt();
         });
