@@ -97,14 +97,11 @@ const drawerLinks = [
 
 <nav
   id="sidebar"
-  class="nav-rail fixed bottom-0 left-0 right-0 z-50
-    flex items-center justify-around
+  class="nav-rail fixed z-50
     bg-[var(--color-surface-2)]
-    border-t border-[var(--color-border)]
-    lg:right-auto lg:bottom-0
+    border border-[var(--color-border)]
     lg:flex-col lg:justify-between lg:items-stretch
-    lg:border-t-0 lg:border-r lg:border-[var(--color-border)]
-    lg:bg-[var(--color-surface-2)]"
+    lg:border-0 lg:border-r lg:border-[var(--color-border)]"
 >
 
   <!-- Desktop: categorized sidebar nav -->
@@ -187,25 +184,23 @@ const drawerLinks = [
     </svg>
   </button>
 
-  <!-- Mobile: bottom tab bar (4 core links + hamburger) -->
-  <div class="flex lg:hidden flex-1 items-center justify-around h-full">
+  <!-- Mobile: floating pill nav -->
+  <div class="flex lg:hidden items-center gap-0.5">
     {mobileLinks.map(({ href, label, svg }) => (
       <a
         href={href}
-        class="nav-mobile-link flex items-center justify-center flex-1 h-full transition-colors"
+        aria-label={label}
+        class="nav-pill-btn"
       >
-        <span class="nav-mobile-pill flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-colors">
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.75"
-            set:html={svg}
-          />
-          <span class="text-[10px] leading-none">{label}</span>
-        </span>
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          set:html={svg}
+        />
       </a>
     ))}
 
@@ -214,23 +209,20 @@ const drawerLinks = [
       id="mobile-menu-trigger"
       aria-label="More options"
       aria-expanded="false"
-      class="nav-mobile-link flex items-center justify-center flex-1 h-full transition-colors"
+      class="nav-pill-btn"
     >
-      <span class="nav-mobile-pill flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-colors">
-        <svg
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.75"
-        >
-          <line stroke-linecap="round" x1="3" y1="6" x2="21" y2="6"/>
-          <line stroke-linecap="round" x1="3" y1="12" x2="21" y2="12"/>
-          <line stroke-linecap="round" x1="3" y1="18" x2="21" y2="18"/>
-        </svg>
-        <span class="text-[10px] leading-none">More</span>
-      </span>
+      <svg
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+      >
+        <line stroke-linecap="round" x1="3" y1="6" x2="21" y2="6"/>
+        <line stroke-linecap="round" x1="3" y1="12" x2="21" y2="12"/>
+        <line stroke-linecap="round" x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
     </button>
   </div>
 </nav>
@@ -354,17 +346,49 @@ const drawerLinks = [
 </div>
 
 <style>
+  @keyframes pill-enter {
+    from {
+      /* translate-only: no opacity so pointer events are never suppressed */
+      transform: translateX(-50%) translateY(10px);
+    }
+    to {
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+
   .nav-rail {
-    height: var(--bottom-nav-height);
-    padding-bottom: env(safe-area-inset-bottom);
+    /* explicit flex + fit-content: prevents fixed block from spanning full viewport width */
+    display: flex;
+    width: fit-content;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px;
+    border-radius: 9999px;
+    /* rgba fallback for browsers without color-mix() (pre-2023) */
+    border-color: rgba(255, 255, 255, 0.14);
+    border-color: color-mix(in srgb, white 14%, transparent);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65), 0 1px 4px rgba(0, 0, 0, 0.4);
+    /* backwards fill: starts at translateY(10px), no opacity risk */
+    animation: pill-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    /* guarantee compositor thread during scroll and animation */
+    will-change: transform;
   }
 
   @media (min-width: 1024px) {
     .nav-rail {
       top: var(--header-height);
+      bottom: 0;
+      left: 0;
+      transform: none;
       height: calc(100dvh - var(--header-height));
       width: var(--sidebar-width-desktop);
-      padding-bottom: 0;
+      padding: 0;
+      border-radius: 0;
+      border-color: var(--color-border);
+      box-shadow: none;
+      animation: none;
+      will-change: auto;
       transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1);
     }
   }
@@ -391,24 +415,29 @@ const drawerLinks = [
     color: #f87171;
   }
 
-  /* Mobile link states */
-  .nav-mobile-link {
+  /* Mobile floating pill button states */
+  .nav-pill-btn {
     color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 9999px;
+    transition: color 150ms ease, background-color 150ms ease;
   }
-  .nav-mobile-link:hover {
+  .nav-pill-btn:hover {
+    background-color: var(--color-surface-3);
     color: var(--color-text);
   }
-  .nav-mobile-link[aria-current="page"] {
+  .nav-pill-btn[aria-current="page"] {
     color: var(--color-accent);
+    background-color: rgba(255, 69, 0, 0.12);
+    background-color: color-mix(in srgb, var(--color-accent) 12%, transparent);
   }
-  .nav-mobile-link[aria-current="page"] .nav-mobile-pill {
+  .nav-pill-btn[aria-expanded="true"] {
     background-color: var(--color-surface-3);
-  }
-  .nav-mobile-link[aria-expanded="true"] {
     color: var(--color-text);
-  }
-  .nav-mobile-link[aria-expanded="true"] .nav-mobile-pill {
-    background-color: var(--color-surface-3);
   }
 
   /* Collapsed sidebar */

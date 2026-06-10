@@ -89,7 +89,7 @@ export default function SceneCard(props: Props) {
         </Show>
       </div>
 
-      {/* Title — above the media, Reddit-style */}
+      {/* Title above the media, Reddit-style */}
       <a
         href={`/scenes/${scene().id}`}
         class="block px-4 pb-2 min-h-0 min-w-0 hover:text-[var(--color-accent)] transition-colors"
@@ -100,7 +100,7 @@ export default function SceneCard(props: Props) {
         </h2>
       </a>
 
-      {/* Media — clicking anywhere except the mute button navigates to detail */}
+      {/* Media clicking anywhere except the mute button navigates to detail */}
       <div
         class="relative w-full bg-black overflow-hidden cursor-pointer"
         style={{

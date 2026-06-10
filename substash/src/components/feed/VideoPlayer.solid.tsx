@@ -39,8 +39,7 @@ export default function VideoPlayer(props: Props) {
 
     observer.observe(videoEl);
 
-    // Stop immediately when Astro begins navigating away — prevents audio
-    // overlap during view transitions and rapid multi-tap navigation.
+    // Stop immediately when Astro begins navigating away prevents audio overlap during view transitions and rapid multi-tap navigation
     function stopOnNavigate() {
       if (!videoEl) return;
       if (props.id && videoEl.currentTime > 0) {

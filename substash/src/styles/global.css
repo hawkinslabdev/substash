@@ -41,7 +41,8 @@
 
   body {
     margin: 0;
-    padding-bottom: var(--bottom-nav-height);
+    /* pill(48px) + gap(20px) + safe-area + breathing room — clears floating nav */
+    padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 88px), 96px);
   }
 
   /* Vertical feed scroll-snap container */
@@ -400,6 +401,9 @@
     animation: none;
   }
   .icon-pulse {
+    animation: none;
+  }
+  .nav-rail {
     animation: none;
   }
   .feed-item:hover {

@@ -32,7 +32,7 @@ export default function PinGate() {
         window.location.href = `/auth?from=${encodeURIComponent(location.pathname)}`;
       }
     } catch {
-      // network error — don't block
+      // catch the network error meaning we don't block
     }
   });
 

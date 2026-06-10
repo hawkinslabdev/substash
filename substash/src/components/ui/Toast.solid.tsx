@@ -35,7 +35,7 @@ export default function Toast() {
     <div
       class="fixed inset-x-4 z-[100] flex justify-center pointer-events-none transition-all duration-200"
       style={{
-        bottom: `calc(var(--bottom-nav-height) + 12px)`,
+        bottom: `max(calc(env(safe-area-inset-bottom, 0px) + 100px), 108px)`,
         opacity: message() ? 1 : 0,
         transform: message() ? "translateY(0)" : "translateY(6px)",
       }}

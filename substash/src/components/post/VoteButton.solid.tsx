@@ -19,7 +19,7 @@ interface Props {
 }
 
 export default function VoteButton(props: Props) {
-  // No persistent vote memory — each page visit gets a fresh like.
+  // No persistent vote memory meaning each page visit gets a fresh like.
   const [count, setCount] = createSignal(props.initialCount);
   const [pending, setPending] = createSignal(false);
   const [voted, setVoted] = createSignal(false);

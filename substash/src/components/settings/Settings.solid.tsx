@@ -354,7 +354,7 @@ export default function Settings(props: Props) {
                 Time until automatic logout after inactivity.
               </p>
             </div>
-            {/* Custom +/- stepper — no native spinners */}
+            {/* Custom +/- stepper */}
             <div class="flex items-center shrink-0 rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-3)]">
               <button
                 onClick={() => adjustHours(-1)}
@@ -459,7 +459,7 @@ export default function Settings(props: Props) {
               </p>
             </Show>
           </div>
-          {/* Toggle — inline-flex so thumb is a flex child, never overflows */}
+          {/* Toggle */}
           <button
             role="switch"
             aria-checked={shareEnabled()}
@@ -550,7 +550,7 @@ export default function Settings(props: Props) {
                 Preview
               </p>
 
-              {/* Editable inputs — Stash API fields */}
+              {/* Editable inputs for Stash API fields */}
               <p class="text-[10px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
                 Stash fields
               </p>
@@ -595,7 +595,7 @@ export default function Settings(props: Props) {
                 ))}
               </div>
 
-              {/* Parsed fields — read-only chips */}
+              {/* Parsed fields (R/O)*/}
               <p class="text-[10px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase pt-1">
                 Parsed from title
               </p>
@@ -692,7 +692,7 @@ export default function Settings(props: Props) {
           </div>
         </Show>
 
-        {/* Page names — collapsible */}
+        {/* Page names are collapsible */}
         <div class="border-t border-[var(--color-border)]">
           <button
             onClick={() => setPageNamesOpen((v) => !v)}
