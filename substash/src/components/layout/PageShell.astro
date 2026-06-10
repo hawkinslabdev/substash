@@ -55,61 +55,104 @@ const {
       }
     </script>
     <script>
+      // Scroll save/restore for Astro ClientRouter SPA navigation.
       //
-      // Astro's ClientRouter re-renders client:only islands asynchronously,
-      // so the page isn't tall enough for browser scroll restoration by the
-      // time it runs. We save scroll on departure and restore once the page
-      // has grown enough to accommodate the target position.
+      // WHY astro:after-swap and not astro:page-load:
+      //   after-swap fires inside startViewTransition() — before the animation
+      //   runs. Scrolling here means the view-transition snapshot captures the
+      //   correct position, so the user never sees a flash at y=0 on back-nav.
+      //
+      // WHY min-height:
+      //   client:only islands (Feed) hydrate asynchronously — the page is short
+      //   at after-swap time. We temporarily stretch the body so scrollTo(y)
+      //   isn't clamped, then remove it once real content fills the page.
 
       const SCROLL_KEY = (url: string) => `substash:scroll:${url}`;
       let pendingRestore: number | null = null;
+      let cancelScrollRestore: (() => void) | null = null;
 
       document.addEventListener('astro:before-preparation', (e) => {
-        // Drop all <link rel="preload"> so in-flight fetches don't trigger
-        // "preloaded resource not used" warnings on the incoming page.
+        cancelScrollRestore?.();
+        cancelScrollRestore = null;
+
         document.querySelectorAll('link[rel="preload"]').forEach((l) => l.remove());
 
-        // Save current scroll position for the page we're leaving
-        if (window.scrollY > 0) {
-          sessionStorage.setItem(SCROLL_KEY(location.href), String(window.scrollY));
+        try {
+          sessionStorage.setItem(SCROLL_KEY(location.href), String(Math.round(window.scrollY)));
+        } catch { /* quota */ }
+
+        const ev = e as TransitionBeforePreparationEvent;
+        // Expose nav type so Feed islands can detect back-nav without depending
+        // on astro:after-swap timing (which fires before client:only hydration).
+        try { sessionStorage.setItem('substash:last-nav-type', ev.navigationType); } catch {}
+
+        if (ev.navigationType === 'traverse') {
+          try {
+            const raw = sessionStorage.getItem(SCROLL_KEY(ev.to.href));
+            const y = raw !== null ? parseInt(raw, 10) : 0;
+            pendingRestore = Number.isFinite(y) && y > 0 ? y : null;
+          } catch {
+            pendingRestore = null;
+          }
+        } else {
+          pendingRestore = null;
         }
-        // Only restore on back/forward traversal, not on fresh link clicks
-        pendingRestore =
-          (e as TransitionBeforePreparationEvent).navigationType === 'traverse'
-            ? (parseInt(sessionStorage.getItem(SCROLL_KEY((e as TransitionBeforePreparationEvent).to.href) ?? '') ?? '0', 10) || null)
-            : null;
       });
 
-      document.addEventListener('astro:page-load', () => {
+      document.addEventListener('astro:after-swap', () => {
         const targetY = pendingRestore;
-        pendingRestore = null;
+
         if (!targetY) {
           window.scrollTo({ top: 0, behavior: 'instant' });
           return;
         }
 
-        function tryScroll(): boolean {
-          if (document.documentElement.scrollHeight >= targetY + window.innerHeight * 0.5) {
-            window.scrollTo({ top: targetY, behavior: 'instant' });
-            return true;
-          }
-          return false;
+        // Stretch body so scrollTo(targetY) isn't clamped while the island is loading.
+        const minH = targetY + window.innerHeight + 100;
+        document.body.style.minHeight = `${minH}px`;
+        // Force synchronous reflow so the minHeight applies before scrollTo.
+        // Without this, the browser uses stale layout (~500px) and clamps scroll to 0.
+        void document.body.offsetHeight;
+        window.scrollTo({ top: targetY, behavior: 'instant' });
+
+        let cleaned = false;
+        let ro: ResizeObserver | null = null;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+
+        function cleanup() {
+          if (cleaned) return;
+          cleaned = true;
+          document.body.style.minHeight = '';
+          ro?.disconnect();
+          if (timer !== null) clearTimeout(timer);
         }
 
-        // Attempt immediately — may already be tall enough (cached TanStack data)
-        if (tryScroll()) return;
-
-        // Otherwise wait for the island to hydrate and render content
-        const ro = new ResizeObserver(() => {
-          if (tryScroll()) ro.disconnect();
+        // Once real content (Feed island) surpasses the synthetic height, remove it
+        // and re-scroll defensively — handles the rare case where the initial
+        // scrollTo was still clamped despite the forced reflow.
+        ro = new ResizeObserver(() => {
+          if (!cleaned && document.documentElement.scrollHeight > minH) {
+            cleanup();
+            window.scrollTo({ top: targetY, behavior: 'instant' });
+          }
         });
         ro.observe(document.body);
 
-        // Hard timeout: give up after 1.5 s and scroll to whatever we can
-        setTimeout(() => {
-          ro.disconnect();
+        timer = setTimeout(() => {
+          cleanup();
           window.scrollTo({ top: targetY, behavior: 'instant' });
-        }, 1500);
+        }, 5000);
+        cancelScrollRestore = cleanup;
+      });
+
+      document.addEventListener('astro:page-load', () => {
+        // Handles initial hard load (no after-swap fired).
+        // SPA push navs: after-swap already scrolled to 0; another call is harmless.
+        // SPA traverse navs: pendingRestore is set, skip so after-swap's scroll stands.
+        if (pendingRestore === null) {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+        pendingRestore = null;
       });
     </script>
   </head>
