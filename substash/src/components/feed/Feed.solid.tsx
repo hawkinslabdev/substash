@@ -49,6 +49,53 @@ if (typeof document !== "undefined") {
   document.addEventListener("astro:before-preparation", flushPreloads);
 }
 
+const FEED_CACHE_TTL = 30 * 60 * 1000;
+
+interface FeedCache {
+  pages: PageResult[];
+  pageParams: (string | null)[];
+  savedAt: number;
+}
+
+function feedCacheKey(
+  sort?: string,
+  tagId?: string,
+  studioId?: string,
+  performerId?: string,
+): string {
+  return `substash:feed:${sort ?? "date"}:${tagId ?? ""}:${studioId ?? ""}:${performerId ?? ""}`;
+}
+
+function feedScrollKey(
+  sort?: string,
+  tagId?: string,
+  studioId?: string,
+  performerId?: string,
+): string {
+  return `substash:feed-scroll:${sort ?? "date"}:${tagId ?? ""}:${studioId ?? ""}:${performerId ?? ""}`;
+}
+
+function loadFeedCache(
+  sort?: string,
+  tagId?: string,
+  studioId?: string,
+  performerId?: string,
+): FeedCache | null {
+  try {
+    const key = feedCacheKey(sort, tagId, studioId, performerId);
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const data: FeedCache = JSON.parse(raw);
+    if (Date.now() - data.savedAt > FEED_CACHE_TTL) {
+      sessionStorage.removeItem(key);
+      return null;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 function FeedSkeleton() {
   return (
     <div class="p-4 space-y-3">
@@ -111,14 +158,22 @@ function FeedInner(props: Props) {
   const [pullY, setPullY] = createSignal(0);
   const [refreshing, setRefreshing] = createSignal(false);
   const [refreshed, setRefreshed] = createSignal(false);
-  // Incrementing this key forces a brand-new random fetch, discarding cached pages.
+  // incrementing this key forces a brand-new random fetch, discarding cached pages
   const [refreshKey, setRefreshKey] = createSignal(0);
   const [retryIn, setRetryIn] = createSignal<number | null>(null);
-  // Ref so the post-load effect can call the scroll check that's defined in onMount.
+  // ref so the post-load effect can call the scroll check that's defined in onMount
   let checkScrollFn: (() => void) | null = null;
+  // track how many items were present at mount so items loaded after this index get feed-enter
+  let mounted = false;
+  let mountedItemCount = 0;
 
+  const cachedFeed = loadFeedCache(
+    props.sort,
+    props.tagId,
+    props.studioId,
+    props.performerId,
+  );
   const endMessage = createMemo(() => {
-    // We access refreshKey so the memo updates when the feed is reset
     refreshKey();
     return END_MESSAGES[Math.floor(Math.random() * END_MESSAGES.length)];
   });
@@ -141,11 +196,16 @@ function FeedInner(props: Props) {
       }),
     initialPageParam: null as string | null,
     getNextPageParam: (last: PageResult) => last.nextCursor ?? undefined,
-    // SSR initial data is only valid for the first key (no refresh yet).
+    // Prefer sessionStorage cache (multi-page) over SSR initialData (single page).
+    // Both only apply for refreshKey=0 (not after a manual pull-to-refresh).
     // initialDataUpdatedAt=now so TanStack treats it as fresh for staleTime.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    initialData: (refreshKey() === 0 && props.initialData
-      ? { pages: [props.initialData], pageParams: [null as string | null] }
+    initialData: (refreshKey() === 0
+      ? cachedFeed
+        ? { pages: cachedFeed.pages, pageParams: cachedFeed.pageParams }
+        : props.initialData
+          ? { pages: [props.initialData], pageParams: [null as string | null] }
+          : undefined
       : undefined) as any,
     initialDataUpdatedAt: refreshKey() === 0 ? Date.now() : undefined,
   }));
@@ -198,9 +258,7 @@ function FeedInner(props: Props) {
     ),
   );
 
-  // After each page load, re-check scroll position. New items increase scrollHeight
-  // but leave scrollTop unchanged — progress drops below the threshold and no scroll
-  // events fire until the user moves again, causing an invisible stall.
+  // After each page load, re-check scroll position. New items increase scrollHeight but leave scrollTop unchanged progress drops below the threshold and no scroll events fire until the user moves again, causing an invisible stall.
   createEffect(
     on(
       () => query.isFetchingNextPage,
@@ -211,12 +269,97 @@ function FeedInner(props: Props) {
     ),
   );
 
+  // Persist feed pages to sessionStorage so back-nav restores full content + scroll position. It skips error pages to avoid caching degraded state.
+  createEffect(() => {
+    const data = query.data;
+    if (!data || data.pages.length === 0) return;
+    if ((data.pages as PageResult[]).some((p) => p.stashError)) return;
+    try {
+      sessionStorage.setItem(
+        feedCacheKey(
+          props.sort,
+          props.tagId,
+          props.studioId,
+          props.performerId,
+        ),
+        JSON.stringify({
+          pages: data.pages,
+          pageParams: data.pageParams,
+          savedAt: Date.now(),
+        } satisfies FeedCache),
+      );
+    } catch {
+      /* storage quota */
+    }
+  });
+
   onMount(() => {
+    document.getElementById("feed-skeleton")?.remove();
     document.querySelector("[data-feed-skeleton]")?.remove();
 
-    // Scroll-based prefetch: triggers at 70% of loaded content height.
-    // This ensures the next page is in flight well before the user hits the
-    // last item, avoiding any visible stall.
+    // Snapshot item count at mount; items beyond this index get feed-enter animation.
+    mounted = true;
+    mountedItemCount = allItems().length;
+
+    // ---- Scroll position save/restore ----
+    // Save scrollY continuously so back-nav can restore it exactly.
+    // This is independent of PageShell's mechanism and works even if
+    // history.back() bypasses Astro's ClientRouter popstate intercept.
+    const scrollKey = feedScrollKey(
+      props.sort,
+      props.tagId,
+      props.studioId,
+      props.performerId,
+    );
+    let scrollSaveTimer: ReturnType<typeof setTimeout> | null = null;
+    function saveScrollPos() {
+      if (scrollSaveTimer !== null) clearTimeout(scrollSaveTimer);
+      scrollSaveTimer = setTimeout(() => {
+        try {
+          sessionStorage.setItem(scrollKey, String(Math.round(window.scrollY)));
+        } catch {}
+      }, 150);
+    }
+    window.addEventListener("scroll", saveScrollPos, { passive: true });
+    onCleanup(() => {
+      window.removeEventListener("scroll", saveScrollPos);
+      if (scrollSaveTimer !== null) clearTimeout(scrollSaveTimer);
+    });
+
+    // Detect back-nav: SPA traverse (via Astro ClientRouter) or native back_forward (full-page reload).
+    // `substash:last-nav-type` is written by PageShell's astro:before-preparation handler.
+    const spaNavType = sessionStorage.getItem("substash:last-nav-type");
+    const perfNavType = (
+      performance.getEntriesByType?.("navigation")[0] as
+        | PerformanceNavigationTiming
+        | undefined
+    )?.type;
+    const isBackNav =
+      spaNavType === "traverse" || perfNavType === "back_forward";
+    // Consume the flag so a later same-tab hard reload doesn't falsely trigger.
+    try {
+      sessionStorage.removeItem("substash:last-nav-type");
+    } catch {}
+
+    if (isBackNav) {
+      try {
+        const rawY = sessionStorage.getItem(scrollKey);
+        if (rawY) {
+          const savedY = parseInt(rawY, 10);
+          if (Number.isFinite(savedY) && savedY > 0) {
+            // Double rAF: first frame lets SolidJS flush, second lets browser reflow.
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                window.scrollTo({ top: savedY, behavior: "instant" });
+              });
+            });
+          }
+        }
+      } catch {}
+    }
+    // ---- End scroll save/restore ----
+
+    // Scroll-based prefetch: triggers at 70% of loaded content height. This ensures the next page is in flight well before the user hits the last item avoiding stall
     let rafPending = false;
     function checkScroll() {
       if (rafPending) return;
@@ -255,9 +398,26 @@ function FeedInner(props: Props) {
       if (pullY() >= 60 && !refreshing()) {
         setRefreshing(true);
         setPullY(0);
+        // Clear cache + saved scroll so back-nav after refresh starts fresh.
+        try {
+          sessionStorage.removeItem(
+            feedCacheKey(
+              props.sort,
+              props.tagId,
+              props.studioId,
+              props.performerId,
+            ),
+          );
+          sessionStorage.removeItem(
+            feedScrollKey(
+              props.sort,
+              props.tagId,
+              props.studioId,
+              props.performerId,
+            ),
+          );
+        } catch {}
         if (props.sort === "random") {
-          // New key → new query → completely fresh shuffle.
-          // The createEffect above clears refreshing when isFetching drops.
           setRefreshKey((k) => k + 1);
         } else {
           query.refetch().finally(() => setRefreshing(false));
@@ -380,8 +540,7 @@ function FeedInner(props: Props) {
               <SceneCard
                 scene={item as import("@/lib/stash/feed-item").SceneFeedItem}
                 class={
-                  index() >= (query.data?.pages.length ?? 1) * 20 - 20 &&
-                  index() < (query.data?.pages.length ?? 1) * 20
+                  mounted && index() >= mountedItemCount
                     ? "feed-enter"
                     : undefined
                 }
@@ -391,8 +550,7 @@ function FeedInner(props: Props) {
               <ImageCard
                 image={item as unknown as ImageFeedItem}
                 class={
-                  index() >= (query.data?.pages.length ?? 1) * 20 - 20 &&
-                  index() < (query.data?.pages.length ?? 1) * 20
+                  mounted && index() >= mountedItemCount
                     ? "feed-enter"
                     : undefined
                 }
