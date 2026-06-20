@@ -21,7 +21,7 @@
     "@astrojs/solid-js": "^6.0.1",
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/solid-query": "^5.100.14",
-    "astro": "^6.3.7",
+    "astro": "^6.4.8",
     "better-sqlite3": "^12.10.0",
     "clsx": "^2.1.1",
     "compression": "^1.8.1",
