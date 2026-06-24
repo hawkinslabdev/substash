@@ -40,16 +40,24 @@ const {
     <!-- Anti-flash: sidebar collapse state + take over scroll restoration -->
     <script is:inline>
       (function () {
-        // Sidebar collapse
-        if (localStorage.getItem('substash:sidebar') === 'collapsed') {
-          document.documentElement.style.setProperty('--sidebar-width-desktop', '64px');
-          document.documentElement.setAttribute('data-sidebar-collapsed', '');
+        function applyLocalTheme() {
+          if (localStorage.getItem('substash:sidebar') === 'collapsed') {
+            document.documentElement.style.setProperty('--sidebar-width-desktop', '64px');
+            document.documentElement.setAttribute('data-sidebar-collapsed', '');
+          } else {
+            document.documentElement.style.removeProperty('--sidebar-width-desktop');
+            document.documentElement.removeAttribute('data-sidebar-collapsed');
+          }
+          const accent = localStorage.getItem('substash:accent');
+          if (accent) {
+            document.documentElement.setAttribute('data-accent', accent);
+          } else {
+            document.documentElement.removeAttribute('data-accent');
+          }
         }
-        // Accent theme
-        const accent = localStorage.getItem('substash:accent');
-        if (accent) {
-          document.documentElement.setAttribute('data-accent', accent);
-        }
+        applyLocalTheme();
+        // ClientRouter morphs <html> on SPA nav, stripping JS-set attrs not in SSR markup
+        document.addEventListener('astro:after-swap', applyLocalTheme);
         // Hand scroll restoration to our own code so Astro doesn't race us
         history.scrollRestoration = 'manual';
       })();
