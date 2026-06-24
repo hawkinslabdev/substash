@@ -35,6 +35,7 @@
     "ulid": "^3.0.2"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.9",
     "@graphql-codegen/cli": "^7.0.0",
     "@graphql-codegen/typescript": "^6.0.1",
     "@graphql-codegen/typescript-operations": "^6.0.2",
