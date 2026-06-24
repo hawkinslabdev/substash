@@ -8,6 +8,15 @@ import {
   type MetadataExprResult,
 } from "@/lib/utils/media-title";
 
+const ACCENT_THEMES = [
+  { key: "reddit", label: "Reddit", sw: "oklch(57% 0.22 35)" },
+  { key: "amber", label: "Amber", sw: "oklch(63% 0.14 58)" },
+  { key: "lavender", label: "Lavender", sw: "oklch(60% 0.11 275)" },
+  { key: "sage", label: "Sage", sw: "oklch(59% 0.12 145)" },
+  { key: "terracotta", label: "Terracotta", sw: "oklch(62% 0.13 34)" },
+  { key: "slate", label: "Slate", sw: "oklch(60% 0.09 228)" },
+] as const;
+
 interface Props {
   pinEnabled: boolean;
   sessionHours: number;
@@ -30,6 +39,20 @@ export default function Settings(props: Props) {
   const [pinError, setPinError] = createSignal("");
   const [pinLoading, setPinLoading] = createSignal(false);
   const [toast, setToast] = createSignal("");
+
+  const [accentTheme, setAccentThemeSignal] = createSignal(
+    localStorage.getItem("substash:accent") ?? "reddit",
+  );
+  function setAccentTheme(key: string) {
+    setAccentThemeSignal(key);
+    if (key === "reddit") {
+      localStorage.removeItem("substash:accent");
+      document.documentElement.removeAttribute("data-accent");
+    } else {
+      localStorage.setItem("substash:accent", key);
+      document.documentElement.setAttribute("data-accent", key);
+    }
+  }
 
   const [feedFallbackName, setFeedFallbackName] = createSignal(
     props.feedFallbackName,
@@ -209,6 +232,25 @@ export default function Settings(props: Props) {
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(""), 2500);
+  }
+
+  const [runningTask, setRunningTask] = createSignal<string | null>(null);
+
+  async function runTask(task: "scan" | "autotag" | "generate", label: string) {
+    setRunningTask(task);
+    try {
+      const res = await fetch("/api/stash/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      showToast(`${label} started in Stash.`);
+    } catch {
+      showToast(`Failed to start ${label.toLowerCase()}.`);
+    } finally {
+      setRunningTask(null);
+    }
   }
 
   function openPinForm(mode: "set" | "change") {
@@ -482,6 +524,42 @@ export default function Settings(props: Props) {
       {/* DISPLAY */}
       <SectionLabel>Display</SectionLabel>
       <div class="border-t border-b border-[var(--color-border)]">
+        {/* Accent theme */}
+        <div class="px-4 py-4 border-b border-[var(--color-border)]">
+          <p class="text-xs text-[var(--color-text-muted)] mb-3">
+            Accent color
+          </p>
+          <div class="accent-swatches">
+            <For each={ACCENT_THEMES}>
+              {(theme) => (
+                <button
+                  class={`accent-swatch ${accentTheme() === theme.key ? "accent-swatch--on" : ""}`}
+                  style={{ "--sw": theme.sw }}
+                  onClick={() => setAccentTheme(theme.key)}
+                  title={theme.label}
+                  aria-label={theme.label}
+                >
+                  <Show when={accentTheme() === theme.key}>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  </Show>
+                </button>
+              )}
+            </For>
+          </div>
+        </div>
+
         {/* Collapsible header row */}
         <button
           onClick={() => setScriptOpen((v) => !v)}
@@ -838,6 +916,51 @@ export default function Settings(props: Props) {
         </Show>
       </div>
 
+      {/* LIBRARY */}
+      <SectionLabel>Library</SectionLabel>
+      <div class="border-t border-b border-[var(--color-border)] divide-y divide-[var(--color-border)]">
+        <Row>
+          <RowLabel
+            title="Scan library"
+            sub="Find new files and metadata changes"
+          />
+          <PillButton
+            onClick={() => runTask("scan", "Library scan")}
+            disabled={runningTask() !== null}
+          >
+            {runningTask() === "scan" ? "Starting…" : "Scan"}
+          </PillButton>
+        </Row>
+        <Row>
+          <RowLabel
+            title="Auto-tag"
+            sub="Match performers, studios, and tags from filenames"
+          />
+          <PillButton
+            onClick={() => runTask("autotag", "Auto-tag")}
+            disabled={runningTask() !== null}
+          >
+            {runningTask() === "autotag" ? "Starting…" : "Run"}
+          </PillButton>
+        </Row>
+        <Row>
+          <RowLabel
+            title="Generate sprites & previews"
+            sub="Thumbnails, previews, sprites, phashes"
+          />
+          <PillButton
+            onClick={() => runTask("generate", "Generate")}
+            disabled={runningTask() !== null}
+          >
+            {runningTask() === "generate" ? "Starting…" : "Run"}
+          </PillButton>
+        </Row>
+        <p class="px-4 py-3 text-xs text-[var(--color-text-muted)]">
+          Tasks run in Stash using the options configured in Stash's own
+          Settings → Tasks tab. Substash only triggers them.
+        </p>
+      </div>
+
       {/* ABOUT */}
       <SectionLabel>About</SectionLabel>
       <div class="border-t border-b border-[var(--color-border)]">
@@ -916,11 +1039,13 @@ function PillButton(props: {
   children: string;
   onClick: () => void;
   danger?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={props.onClick}
-      class={`text-xs px-2.5 py-1.5 rounded-lg transition-colors hover:bg-[var(--color-surface-3)] ${props.danger ? "text-red-400 hover:text-red-300" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
+      disabled={props.disabled}
+      class={`text-xs px-2.5 py-1.5 rounded-lg transition-colors hover:bg-[var(--color-surface-3)] disabled:opacity-40 disabled:cursor-not-allowed ${props.danger ? "text-red-400 hover:text-red-300" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
     >
       {props.children}
     </button>

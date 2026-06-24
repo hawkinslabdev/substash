@@ -34,9 +34,6 @@
     "tailwindcss": "^4.2.4",
     "ulid": "^3.0.2"
   },
-  "overrides": {
-    "vite": "^7"
-  },
   "devDependencies": {
     "@graphql-codegen/cli": "^7.0.0",
     "@graphql-codegen/typescript": "^6.0.1",

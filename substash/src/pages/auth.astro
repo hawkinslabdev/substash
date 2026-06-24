@@ -1,4 +1,5 @@
 ---
+import "@/styles/global.css";
 const from = Astro.url.searchParams.get("from") ?? "/";
 ---
 
@@ -9,13 +10,19 @@ const from = Astro.url.searchParams.get("from") ?? "/";
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0d0d0d" />
     <title>Substash: Unlock</title>
+    <script is:inline>
+      (function () {
+        const accent = localStorage.getItem('substash:accent');
+        if (accent) document.documentElement.setAttribute('data-accent', accent);
+      })();
+    </script>
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       body {
         min-height: 100dvh;
-        background: #0d0d0d;
-        color: #e8e8e8;
-        font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+        background: var(--color-surface);
+        color: var(--color-text);
+        font-family: var(--font-sans);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -32,14 +39,14 @@ const from = Astro.url.searchParams.get("from") ?? "/";
       .logo {
         width: 48px;
         height: 48px;
-        background: #ff4500;
+        background: var(--color-accent);
         border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
       }
       h1 { font-size: 1.125rem; font-weight: 600; }
-      p.sub { font-size: 0.8125rem; color: #888; text-align: center; }
+      p.sub { font-size: 0.8125rem; color: var(--color-text-muted); text-align: center; }
       .boxes {
         display: flex;
         gap: 10px;
@@ -47,23 +54,23 @@ const from = Astro.url.searchParams.get("from") ?? "/";
       .box {
         width: 44px;
         height: 52px;
-        background: #1e1e1e;
-        border: 1.5px solid #2a2a2a;
+        background: var(--color-surface-3);
+        border: 1.5px solid var(--color-border);
         border-radius: 8px;
         font-size: 1.25rem;
         font-weight: 600;
         text-align: center;
-        color: #e8e8e8;
-        caret-color: #ff4500;
+        color: var(--color-text);
+        caret-color: var(--color-accent);
         outline: none;
         transition: border-color 0.15s;
         text-transform: uppercase;
       }
-      .box:focus { border-color: #ff4500; }
+      .box:focus { border-color: var(--color-accent); }
       .btn {
         width: 100%;
         height: 48px;
-        background: #ff4500;
+        background: var(--color-accent);
         color: #fff;
         border: none;
         border-radius: 10px;
@@ -72,11 +79,11 @@ const from = Astro.url.searchParams.get("from") ?? "/";
         cursor: pointer;
         transition: background 0.15s, opacity 0.15s;
       }
-      .btn:hover { background: #ff6534; }
+      .btn:hover { background: var(--color-accent-hover); }
       .btn:disabled { opacity: 0.5; cursor: not-allowed; }
       .error {
         font-size: 0.8125rem;
-        color: #ff4500;
+        color: var(--color-accent);
         text-align: center;
         min-height: 1.2em;
       }

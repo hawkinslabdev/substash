@@ -77,6 +77,54 @@
   }
 }
 
+/* Accent theme overrides — set via data-accent on <html>, see PageShell anti-flash script.
+   Hover variant is base lightness +4%, same hue/chroma. */
+[data-accent="amber"] {
+  --color-accent: oklch(63% 0.14 58);
+  --color-accent-hover: oklch(67% 0.14 58);
+}
+[data-accent="lavender"] {
+  --color-accent: oklch(60% 0.11 275);
+  --color-accent-hover: oklch(64% 0.11 275);
+}
+[data-accent="sage"] {
+  --color-accent: oklch(59% 0.12 145);
+  --color-accent-hover: oklch(63% 0.12 145);
+}
+[data-accent="terracotta"] {
+  --color-accent: oklch(62% 0.13 34);
+  --color-accent-hover: oklch(66% 0.13 34);
+}
+[data-accent="slate"] {
+  --color-accent: oklch(60% 0.09 228);
+  --color-accent-hover: oklch(64% 0.09 228);
+}
+
+/* Settings: accent swatches */
+.accent-swatches {
+  display: flex;
+  gap: 12px;
+}
+.accent-swatch {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  background: var(--sw);
+  border: 2px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition:
+    transform 80ms ease,
+    border-color 150ms ease;
+}
+.accent-swatch--on {
+  border-color: var(--color-text);
+}
+
 /* Markdown rendered comment body */
 .md-body p {
   margin-bottom: 0.5em;

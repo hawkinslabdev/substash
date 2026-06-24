@@ -279,3 +279,23 @@ export const SCENE_ADD_PLAY = gql`
     }
   }
 `;
+
+// Empty input objects: Stash applies the defaults configured in its own
+// Settings > Tasks tab when fields are omitted, so we don't replicate them here.
+export const METADATA_SCAN = gql`
+  mutation MetadataScan {
+    metadataScan(input: {})
+  }
+`;
+
+export const METADATA_AUTO_TAG = gql`
+  mutation MetadataAutoTag {
+    metadataAutoTag(input: {})
+  }
+`;
+
+export const METADATA_GENERATE = gql`
+  mutation MetadataGenerate {
+    metadataGenerate(input: {})
+  }
+`;

@@ -45,6 +45,11 @@ const {
           document.documentElement.style.setProperty('--sidebar-width-desktop', '64px');
           document.documentElement.setAttribute('data-sidebar-collapsed', '');
         }
+        // Accent theme
+        const accent = localStorage.getItem('substash:accent');
+        if (accent) {
+          document.documentElement.setAttribute('data-accent', accent);
+        }
         // Hand scroll restoration to our own code so Astro doesn't race us
         history.scrollRestoration = 'manual';
       })();
