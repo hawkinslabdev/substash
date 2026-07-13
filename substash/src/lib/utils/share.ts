@@ -37,3 +37,29 @@ export async function getShareUrl(
 export function resetShareCache() {
   shareEnabledCache = null;
 }
+
+/** Shared share flow: native share sheet when available, clipboard + toast otherwise. */
+export async function shareMedia(
+  stashId: string,
+  mediaType: "scene" | "image",
+  title?: string | null,
+): Promise<void> {
+  const originalPath = `/${mediaType}s/${stashId}`;
+  const url = await getShareUrl(stashId, mediaType, originalPath);
+  if (navigator.share) {
+    navigator
+      .share({
+        title: title || (mediaType === "scene" ? "Video" : "Photo"),
+        url,
+      })
+      .catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(url).then(() => {
+      window.dispatchEvent(
+        new CustomEvent("substash:toast", {
+          detail: { message: "Link copied", duration: 2500 },
+        }),
+      );
+    });
+  }
+}

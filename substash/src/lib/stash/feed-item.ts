@@ -22,6 +22,8 @@ export interface BaseFeedItem {
   metaOrigin: string | null;
   metaCredit: string | null;
   metaDay: string | null;
+  /** Local comment count from SQLite — filled server-side by attachCommentCounts */
+  commentCount: number;
 }
 
 export interface SceneFeedItem extends BaseFeedItem {
@@ -97,6 +99,7 @@ export function sceneToFeedItem(scene: StashScene): SceneFeedItem {
     metaOrigin: sub.origin,
     metaCredit: sub.credit,
     metaDay: sub.day,
+    commentCount: 0,
     paths: {
       stream: scene.paths.stream ? `/api/stash/stream/${scene.id}` : null,
       screenshot: scene.paths.screenshot || null,
@@ -144,6 +147,7 @@ export function imageToFeedItem(image: StashImage): ImageFeedItem {
     metaOrigin: sub.origin,
     metaCredit: sub.credit,
     metaDay: sub.day,
+    commentCount: 0,
     paths: {
       thumbnail: image.paths.thumbnail || null,
       preview: image.paths.preview || null,

@@ -10,9 +10,39 @@
   --color-accent: #ff4500;
   --color-accent-hover: #ff6534;
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --radius-card: 12px;
+  /* Radius scale — concentric nesting: inner element radius = outer − padding */
+  --radius-card: 16px;
+  --radius-sheet: 24px;
+  --radius-control: 12px;
   --bottom-nav-height: 56px;
   --header-height: 48px;
+  /* Liquid Glass material — floating chrome only (nav, headers, overlays, sheets) */
+  --glass-bg: color-mix(in srgb, var(--color-surface-2) 72%, transparent);
+  --glass-bg-strong: color-mix(
+    in srgb,
+    var(--color-surface-2) 85%,
+    transparent
+  );
+  --glass-border: color-mix(in srgb, white 12%, transparent);
+  --glass-blur: 20px;
+  /* Motion tokens */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-press: 80ms;
+  --dur-transition: 250ms;
+  --dur-sheet: 320ms;
+}
+
+/* OLED-black theme — set via data-theme on <html>, persisted in
+   localStorage('substash:theme'), applied by PageShell anti-flash script.
+   Elevation on pure black comes from surface deltas + borders, not shadows. */
+[data-theme="oled"] {
+  --color-surface: #000000;
+  --color-surface-2: #0a0a0a;
+  --color-surface-3: #141414;
+  --color-border: #1f1f1f;
+  --glass-bg: color-mix(in srgb, #0a0a0a 65%, transparent);
+  --glass-bg-strong: color-mix(in srgb, #0a0a0a 82%, transparent);
 }
 
 /* Sidebar width — set by JS for collapse state, anti-flash script in PageShell reads this */
@@ -75,6 +105,97 @@
     transform: scale(0.95);
     transition: transform 80ms ease;
   }
+}
+
+/* Liquid Glass material — apply only to floating chrome (nav pill, headers,
+   media overlays, sheets). Never on content cards. Max 2 layers per screen. */
+.glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  border: 1px solid var(--glass-border);
+}
+.glass-strong {
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  border: 1px solid var(--glass-border);
+}
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .glass,
+  .glass-strong {
+    background: var(--color-surface-2);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-strong {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--color-surface-2);
+  }
+}
+
+/* Translucent header — Reddit-style: blurred surface with a hairline divider */
+.header-glass {
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+}
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .header-glass {
+    background: var(--color-surface);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .header-glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--color-surface);
+  }
+}
+
+/* Mobile cards: seamless rounded slabs — no hairline dividers, media inset
+   with concentric radius. Desktop keeps its boxed card treatment. */
+@media (max-width: 1023px) {
+  .feed-item {
+    margin-bottom: 8px;
+  }
+  .feed-item .media-frame {
+    margin-inline: 8px;
+    border-radius: var(--radius-card);
+    overflow: hidden;
+  }
+}
+
+/* Immersive vertical pager (Discover) — one media item per viewport */
+.immersive-container {
+  position: fixed;
+  inset: 0;
+  z-index: 10; /* below the floating nav pill (z-50) */
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior-y: contain;
+  background: black;
+  -webkit-overflow-scrolling: touch;
+}
+@media (min-width: 1024px) {
+  .immersive-container {
+    left: var(--sidebar-width-desktop);
+    top: var(--header-height);
+  }
+}
+.immersive-item {
+  position: relative;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow: hidden;
 }
 
 /* Accent theme overrides — set via data-accent on <html>, see PageShell anti-flash script.
@@ -287,6 +408,32 @@
   animation: vote-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* Double-tap-to-like center heart */
+@keyframes heart-burst {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  18% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  32% {
+    transform: scale(0.96);
+  }
+  46% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+.heart-burst {
+  animation: heart-burst 800ms var(--ease-out-quart) forwards;
+}
+
 /* Feed item entrance on pagination */
 @keyframes feed-enter {
   from {
@@ -420,6 +567,13 @@
     transform: translateY(-2px);
     box-shadow: 0 5px 18px rgba(0, 0, 0, 0.4);
   }
+
+  /* Shadows are invisible on pure black — layering comes from the border */
+  [data-theme="oled"] .feed-item,
+  [data-theme="oled"] .feed-item:hover {
+    box-shadow: none;
+    border: 1px solid var(--color-border);
+  }
 }
 
 /* Respect reduced motion */
@@ -453,6 +607,12 @@
   }
   .nav-rail {
     animation: none;
+    transition: none;
+  }
+  .heart-burst {
+    /* Static heart flash instead of the pop */
+    animation: none;
+    opacity: 1;
   }
   .feed-item:hover {
     transform: none;

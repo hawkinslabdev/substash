@@ -509,6 +509,7 @@ export const DEMO_ITEMS: ImageFeedItem[] = TOP_50_MEMES.map((meme, i) => {
     metaOrigin: null,
     metaCredit: null,
     metaDay: null,
+    commentCount: 0,
     paths: { thumbnail: meme.url, preview: null },
     rating100,
     o_counter,

@@ -8,6 +8,7 @@ import { stashRequest } from "@/lib/stash/client";
 import { FIND_SCENES, FIND_IMAGES } from "@/lib/stash/queries";
 import { encodeCursor, nextCursor, type CursorPayload } from "@/lib/utils/cursor";
 import { sceneToFeedItem, imageToFeedItem } from "@/lib/stash/feed-item";
+import { attachCommentCounts } from "@/lib/db/comment-counts";
 import type { FeedItem } from "@/lib/stash/feed-item";
 import type { FindScenesQuery, FindImagesQuery } from "@/lib/stash/types";
 import { filterByTags } from "@/lib/stash/filter";
@@ -72,8 +73,8 @@ async function fetchFeed(): Promise<FeedResult> {
     const filteredScenes = filterByTags(scenesData.findScenes.scenes);
     const filteredImages = filterByTags(imagesData.findImages.images);
 
-    const scenes = filteredScenes.map(sceneToFeedItem);
-    const images = filteredImages.map(imageToFeedItem);
+    const scenes = attachCommentCounts(filteredScenes.map(sceneToFeedItem));
+    const images = attachCommentCounts(filteredImages.map(imageToFeedItem));
 
     const maxLen = Math.max(scenes.length, images.length);
     for (let i = 0; i < maxLen; i++) {
@@ -123,7 +124,7 @@ if (DEMO_MODE) {
 ---
 
 <PageShell title="Substash: Home">
-  <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)] flex items-center gap-3">
+  <header class="header-glass sticky top-0 z-10 px-4 py-3 flex items-center gap-3">
     <h1 class="text-base font-semibold">
       <img
         src="/logo.svg" alt="Substash logo" class="inline w-5 h-5 mr-1 -mt-0.5"

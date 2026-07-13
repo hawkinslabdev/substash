@@ -20,7 +20,7 @@ import ImageCard from "./ImageCard.solid";
 import { proxyImage } from "@/lib/stash/image";
 import type { FeedItem, ImageFeedItem } from "@/lib/stash/feed-item";
 
-interface PageResult {
+export interface PageResult {
   items: FeedItem[];
   cursor: string;
   nextCursor: string | null;
@@ -126,7 +126,7 @@ const queryClient = new QueryClient({
   },
 });
 
-async function fetchPage(
+export async function fetchPage(
   cursor: string | null,
   params: Omit<Props, "initialData">,
 ): Promise<PageResult> {

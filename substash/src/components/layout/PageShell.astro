@@ -54,6 +54,15 @@ const {
           } else {
             document.documentElement.removeAttribute('data-accent');
           }
+          const theme = localStorage.getItem('substash:theme');
+          if (theme === 'oled') {
+            document.documentElement.setAttribute('data-theme', 'oled');
+          } else {
+            document.documentElement.removeAttribute('data-theme');
+          }
+          // Status bar must match the surface, especially in installed PWA
+          const themeColor = document.querySelector('meta[name="theme-color"]');
+          if (themeColor) themeColor.setAttribute('content', theme === 'oled' ? '#000000' : '#0d0d0d');
         }
         applyLocalTheme();
         // ClientRouter morphs <html> on SPA nav, stripping JS-set attrs not in SSR markup
@@ -171,12 +180,14 @@ const {
   </head>
   <body>
     <TopHeader />
+    {/* Nav streams before <main>: it must not wait on slow page content
+        (e.g. a Stash fetch). It's position:fixed, so DOM order is visual-neutral. */}
+    <slot name="nav" />
     <main transition:animate="fade">
       <div class="lg:max-w-[720px] lg:mx-auto">
         <slot />
       </div>
     </main>
-    <slot name="nav" />
     <Toast client:load />
   </body>
 </html>

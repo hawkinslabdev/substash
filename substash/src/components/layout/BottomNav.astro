@@ -97,11 +97,8 @@ const drawerLinks = [
 
 <nav
   id="sidebar"
-  class="nav-rail fixed z-50
-    bg-[var(--color-surface-2)]
-    border border-[var(--color-border)]
-    lg:flex-col lg:justify-between lg:items-stretch
-    lg:border-0 lg:border-r lg:border-[var(--color-border)]"
+  class="nav-rail glass fixed z-50
+    lg:flex-col lg:justify-between lg:items-stretch"
 >
 
   <!-- Desktop: categorized sidebar nav -->
@@ -135,8 +132,8 @@ const drawerLinks = [
       </div>
     ))}
 
-    <!-- Log off (desktop sidebar — pushed to bottom) -->
-    <div class="mt-auto px-3">
+    <!-- Log off (desktop sidebar — pushed to bottom, separated as destructive zone) -->
+    <div class="mt-auto px-3 pt-3 border-t border-[var(--color-border)]">
       <button
         data-logout-trigger
         class="nav-logout-btn flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap w-full text-left"
@@ -237,8 +234,8 @@ const drawerLinks = [
 <!-- ── Mobile drawer ── -->
 <div
   id="mobile-drawer"
-  class="lg:hidden fixed bottom-0 inset-x-0 z-[70] translate-y-full bg-[var(--color-surface-2)] border-t border-[var(--color-border)] rounded-t-2xl"
-  style="transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1); padding-bottom: env(safe-area-inset-bottom)"
+  class="glass-strong lg:hidden fixed bottom-0 inset-x-0 z-[70] rounded-t-[var(--radius-sheet)]"
+  style="transform: translateY(100%); transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1); padding-bottom: env(safe-area-inset-bottom); border-bottom: 0"
 >
   <!-- Drag handle -->
   <div class="flex justify-center pt-3 pb-2">
@@ -272,7 +269,7 @@ const drawerLinks = [
     <!-- Log off (mobile drawer) -->
     <button
       data-logout-trigger
-      class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium w-full text-left text-red-400 hover:bg-red-950/30 active:scale-[0.98] transition-all"
+      class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold w-full text-left text-red-400 hover:bg-red-950/30 active:bg-red-950/40 active:scale-[0.98] transition-all"
     >
       <svg
         width="20"
@@ -292,10 +289,10 @@ const drawerLinks = [
   </div>
 </div>
 
-<!-- ── Logout confirmation modal ── -->
+<!-- ── Logout confirmation action sheet ── -->
 <div
   id="logout-modal"
-  class="fixed inset-0 z-[80] flex items-center justify-center opacity-0 pointer-events-none"
+  class="fixed inset-0 z-[80] opacity-0 pointer-events-none"
   style="transition: opacity 200ms ease"
   role="dialog"
   aria-modal="true"
@@ -303,41 +300,35 @@ const drawerLinks = [
 >
   <div
     id="logout-modal-backdrop"
-    class="absolute inset-0 bg-black/70"
+    class="absolute inset-0 bg-black/60"
   ></div>
   <div
-    class="relative mx-4 w-full max-w-xs bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-2xl p-6 shadow-2xl"
-    style="transform: scale(0.96); transition: transform 200ms ease"
+    class="glass-strong absolute bottom-0 inset-x-0 lg:max-w-sm lg:mx-auto rounded-t-[var(--radius-sheet)] px-4 pt-3"
+    style="transform: translateY(100%); transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1); padding-bottom: max(env(safe-area-inset-bottom), 16px); border-bottom: 0"
     id="logout-modal-card"
   >
-    <!-- Icon -->
-    <div class="flex justify-center mb-4">
-      <div class="w-12 h-12 rounded-full bg-red-950/40 border border-red-900/40 flex items-center justify-center">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="text-red-400">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <polyline stroke-linecap="round" stroke-linejoin="round" points="16 17 21 12 16 7"/>
-          <line stroke-linecap="round" x1="21" y1="12" x2="9" y2="12"/>
-        </svg>
-      </div>
+    <!-- Drag handle -->
+    <div class="flex justify-center pb-3">
+      <div class="w-10 h-1 rounded-full bg-[var(--color-border)]"></div>
     </div>
 
     <h2 id="logout-modal-title" class="text-base font-semibold text-[var(--color-text)] text-center mb-1">
       Log off?
     </h2>
-    <p class="text-sm text-[var(--color-text-muted)] text-center mb-6">
+    <p class="text-sm text-[var(--color-text-muted)] text-center mb-5">
       You'll need your PIN to get back in.
     </p>
 
     <div class="flex flex-col gap-2">
       <button
         id="logout-confirm"
-        class="h-11 rounded-xl bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white text-sm font-semibold transition-all"
+        class="h-12 rounded-[var(--radius-control)] bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white text-sm font-semibold transition-all"
       >
         Log off
       </button>
       <button
         id="logout-cancel"
-        class="h-11 rounded-xl text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-3)] active:scale-[0.98] transition-all"
+        class="h-12 rounded-[var(--radius-control)] text-sm font-medium text-[var(--color-text)] bg-[var(--color-surface-3)] hover:bg-[var(--color-border)] active:scale-[0.98] transition-all"
       >
         Cancel
       </button>
@@ -365,27 +356,40 @@ const drawerLinks = [
     transform: translateX(-50%);
     padding: 4px;
     border-radius: 9999px;
-    /* rgba fallback for browsers without color-mix() (pre-2023) */
-    border-color: rgba(255, 255, 255, 0.14);
-    border-color: color-mix(in srgb, white 14%, transparent);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65), 0 1px 4px rgba(0, 0, 0, 0.4);
     /* backwards fill: starts at translateY(10px), no opacity risk */
     animation: pill-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
     /* guarantee compositor thread during scroll and animation */
     will-change: transform;
+    transition:
+      transform 250ms var(--ease-out-quart),
+      opacity 250ms var(--ease-out-quart);
   }
 
+  /* Minimize while scrolling down, restore on scroll-up — iOS 26 tab bar behavior */
+  .nav-rail[data-minimized] {
+    transform: translateX(-50%) scale(0.86);
+    opacity: 0.92;
+  }
+
+  /* Desktop: flush full-height rail, Reddit-style — flat surface, hairline divider */
   @media (min-width: 1024px) {
-    .nav-rail {
+    nav.nav-rail,
+    nav.nav-rail[data-minimized] {
       top: var(--header-height);
       bottom: 0;
       left: 0;
       transform: none;
+      opacity: 1;
       height: calc(100dvh - var(--header-height));
       width: var(--sidebar-width-desktop);
       padding: 0;
       border-radius: 0;
-      border-color: var(--color-border);
+      background: var(--color-surface-2);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      border: 0;
+      border-right: 1px solid var(--color-border);
       box-shadow: none;
       animation: none;
       will-change: auto;
@@ -406,13 +410,13 @@ const drawerLinks = [
     color: var(--color-accent);
   }
 
-  /* Log off button (desktop) */
+  /* Log off button (desktop) — destructive row: red at rest, iOS-style */
   .nav-logout-btn {
-    color: var(--color-text-muted);
+    color: #f87171;
   }
   .nav-logout-btn:hover {
     background-color: color-mix(in srgb, #dc2626 12%, transparent);
-    color: #f87171;
+    color: #fca5a5;
   }
 
   /* Mobile floating pill button states */
@@ -444,6 +448,12 @@ const drawerLinks = [
   :global(:root[data-sidebar-collapsed]) .nav-label,
   :global(:root[data-sidebar-collapsed]) .nav-category {
     display: none;
+  }
+  :global(:root[data-sidebar-collapsed]) .nav-desktop-link,
+  :global(:root[data-sidebar-collapsed]) .nav-logout-btn {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
   }
   :global(:root[data-sidebar-collapsed]) #toggle-icon {
     transform: rotate(180deg);
@@ -500,7 +510,7 @@ const drawerLinks = [
     const drawer = document.getElementById('mobile-drawer');
     const backdrop = document.getElementById('mobile-drawer-backdrop');
     const trigger = document.getElementById('mobile-menu-trigger');
-    drawer?.classList.remove('translate-y-full');
+    if (drawer) drawer.style.transform = 'translateY(0)';
     backdrop?.classList.remove('opacity-0', 'pointer-events-none');
     trigger?.setAttribute('aria-expanded', 'true');
   }
@@ -509,7 +519,7 @@ const drawerLinks = [
     const drawer = document.getElementById('mobile-drawer');
     const backdrop = document.getElementById('mobile-drawer-backdrop');
     const trigger = document.getElementById('mobile-menu-trigger');
-    drawer?.classList.add('translate-y-full');
+    if (drawer) drawer.style.transform = 'translateY(100%)';
     backdrop?.classList.add('opacity-0', 'pointer-events-none');
     trigger?.setAttribute('aria-expanded', 'false');
   }
@@ -522,7 +532,7 @@ const drawerLinks = [
     if (!modal || !card) return;
     _prevFocus = document.activeElement as HTMLElement;
     modal.classList.remove('opacity-0', 'pointer-events-none');
-    card.style.transform = 'scale(1)';
+    card.style.transform = 'translateY(0)';
     // Move focus to Cancel (safer default for destructive action)
     setTimeout(() => (document.getElementById('logout-cancel') as HTMLElement)?.focus(), 50);
     document.addEventListener('keydown', handleModalKeydown);
@@ -533,7 +543,7 @@ const drawerLinks = [
     const card = document.getElementById('logout-modal-card');
     if (!modal || !card) return;
     modal.classList.add('opacity-0', 'pointer-events-none');
-    card.style.transform = 'scale(0.96)';
+    card.style.transform = 'translateY(100%)';
     document.removeEventListener('keydown', handleModalKeydown);
     _prevFocus?.focus();
     _prevFocus = null;
@@ -603,10 +613,46 @@ const drawerLinks = [
     closeDrawer();
   }
 
+  // Minimize the floating pill while scrolling down, restore on scroll-up or
+  // near-top. Window-level listener bound once; the nav element is re-queried
+  // because ClientRouter swaps the DOM on navigation.
+  let navScrollBound = false;
+  let lastScrollY = 0;
+  let scrollAccum = 0;
+
+  function bindNavMinimize() {
+    if (navScrollBound) return;
+    navScrollBound = true;
+    lastScrollY = window.scrollY;
+
+    window.addEventListener(
+      'scroll',
+      () => {
+        const nav = document.getElementById('sidebar');
+        if (!nav) return;
+        const y = window.scrollY;
+        const dy = y - lastScrollY;
+        lastScrollY = y;
+        // Reset accumulator on direction change (24px hysteresis)
+        if ((dy > 0) !== (scrollAccum > 0)) scrollAccum = 0;
+        scrollAccum += dy;
+        if (y < 48 || scrollAccum < -24) {
+          nav.removeAttribute('data-minimized');
+        } else if (scrollAccum > 24) {
+          nav.setAttribute('data-minimized', '');
+        }
+      },
+      { passive: true },
+    );
+  }
+
   initSidebar();
   initDrawerAndModal();
+  bindNavMinimize();
   document.addEventListener('astro:page-load', () => {
     initSidebar();
     initDrawerAndModal();
+    lastScrollY = window.scrollY;
+    scrollAccum = 0;
   });
 </script>

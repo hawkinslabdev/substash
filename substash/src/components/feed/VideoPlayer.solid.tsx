@@ -1,4 +1,4 @@
-import { createSignal, onMount, onCleanup } from "solid-js";
+import { createSignal, onMount, onCleanup, Show } from "solid-js";
 import { cn } from "@/lib/utils/cn";
 
 interface Props {
@@ -7,13 +7,21 @@ interface Props {
   class?: string;
   id?: string;
   onPlay?: () => void;
+  /** Mute button corner — immersive mode uses top-right to clear the title overlay */
+  mutePos?: "bottom-left" | "top-right";
+  /** Buffer metadata immediately (immersive neighbors), instead of on intersect */
+  warm?: boolean;
 }
 
 export default function VideoPlayer(props: Props) {
   let videoEl: HTMLVideoElement | undefined;
   const [muted, setMuted] = createSignal(true);
   const [playing, setPlaying] = createSignal(false);
-  const [preload, setPreload] = createSignal<"none" | "metadata">("none");
+  // First real frame rendered — poster overlay can go
+  const [started, setStarted] = createSignal(false);
+  const [preload, setPreload] = createSignal<"none" | "metadata">(
+    props.warm ? "metadata" : "none",
+  );
 
   onMount(() => {
     if (!videoEl) return;
@@ -77,12 +85,30 @@ export default function VideoPlayer(props: Props) {
         playsinline
         loop
         preload={preload()}
+        onPlaying={() => setStarted(true)}
         class="w-full h-full object-contain"
       />
+      {/* Poster overlay: iOS Safari drops the native poster and shows a black
+          player as soon as metadata loads — keep the thumbnail visible until
+          the first real frame plays. */}
+      <Show when={props.poster && !started()}>
+        <img
+          src={props.poster!}
+          alt=""
+          aria-hidden="true"
+          class="absolute inset-0 w-full h-full object-contain z-10 pointer-events-none"
+          decoding="async"
+        />
+      </Show>
       <button
         onClick={toggleMute}
         aria-label={muted() ? "Unmute" : "Mute"}
-        class="absolute bottom-3 right-3 p-2 rounded-full bg-[var(--color-surface)]/75 text-[var(--color-text)] opacity-70 focus:opacity-100 active:opacity-100 transition-opacity"
+        class="glass absolute z-20 p-2 rounded-full text-white opacity-80 focus:opacity-100 active:opacity-100 transition-opacity"
+        classList={{
+          "bottom-3 left-3": props.mutePos !== "top-right",
+          "top-[calc(env(safe-area-inset-top,0px)+12px)] right-3":
+            props.mutePos === "top-right",
+        }}
       >
         {muted() ? (
           <svg

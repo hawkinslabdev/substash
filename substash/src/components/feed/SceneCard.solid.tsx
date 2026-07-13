@@ -1,12 +1,14 @@
-import { Show } from "solid-js";
+import { Show, createSignal } from "solid-js";
 import { navigate } from "astro:transitions/client";
 import { prefetch } from "astro:prefetch";
 import VideoPlayer from "./VideoPlayer.solid";
+import MediaActionRail from "./MediaActionRail.solid";
 import VoteButton from "@/components/post/VoteButton.solid";
 import { cn } from "@/lib/utils/cn";
 import { proxyImage } from "@/lib/stash/image";
 import { timeAgo } from "@/lib/utils/markdown";
-import { getShareUrl } from "@/lib/utils/share";
+import { shareMedia } from "@/lib/utils/share";
+import { useVote } from "@/lib/hooks/useVote";
 import type { SceneFeedItem } from "@/lib/stash/feed-item";
 
 interface Props {
@@ -22,26 +24,46 @@ export default function SceneCard(props: Props) {
   const mediaAspect = () =>
     file() ? `${file()!.width} / ${file()!.height}` : "16 / 9";
 
-  async function handleShare() {
-    const originalPath = `/scenes/${scene().id}`;
-    const url = await getShareUrl(scene().id, "scene", originalPath);
-    if (navigator.share) {
-      navigator.share({ title: scene().title ?? "Video", url }).catch(() => {});
-    } else {
-      navigator.clipboard?.writeText(url).then(() => {
-        window.dispatchEvent(
-          new CustomEvent("substash:toast", {
-            detail: { message: "Link copied", duration: 2500 },
-          }),
-        );
-      });
+  function handleShare() {
+    shareMedia(scene().id, "scene", scene().title);
+  }
+
+  // Double-tap media = like (with center heart burst); single tap navigates
+  // after the double-tap detection window.
+  const vote = useVote({
+    id: props.scene.id,
+    mediaType: "scene",
+    initialCount: props.scene.o_counter ?? 0,
+    title: props.scene.title ?? undefined,
+    thumbnailUrl: props.scene.paths.screenshot ?? undefined,
+  });
+  const [heart, setHeart] = createSignal(false);
+  let tapTimer: number | undefined;
+
+  function handleMediaClick(e: MouseEvent) {
+    if ((e.target as Element).closest("button")) return;
+    if (tapTimer !== undefined) {
+      clearTimeout(tapTimer);
+      tapTimer = undefined;
+      setHeart(false);
+      requestAnimationFrame(() => setHeart(true));
+      setTimeout(() => setHeart(false), 800);
+      vote.vote();
+      return;
     }
+    // Warm the detail route during the double-tap window so the eventual
+    // navigation feels instant.
+    prefetch(`/scenes/${scene().id}`);
+    tapTimer = window.setTimeout(() => {
+      tapTimer = undefined;
+      navigate(`/scenes/${scene().id}`);
+    }, 260);
   }
 
   return (
     <article
       class={cn(
-        "feed-item flex flex-col bg-[var(--color-surface)] border-b border-[var(--color-border)]",
+        "feed-item flex flex-col bg-[var(--color-surface)]",
         props.class,
       )}
       data-stash-id={scene().id}
@@ -95,22 +117,19 @@ export default function SceneCard(props: Props) {
         class="block px-4 pb-2 min-h-0 min-w-0 hover:text-[var(--color-accent)] transition-colors"
         data-astro-prefetch
       >
-        <h2 class="text-[15px] font-semibold leading-snug line-clamp-2">
+        <h2 class="text-[17px] font-semibold leading-snug tracking-[-0.01em] line-clamp-2 [text-wrap:balance]">
           {scene().title ?? "Untitled"}
         </h2>
       </a>
 
       {/* Media clicking anywhere except the mute button navigates to detail */}
       <div
-        class="relative w-full bg-black overflow-hidden cursor-pointer"
+        class="media-frame relative w-full bg-black overflow-hidden cursor-pointer"
         style={{
           "aspect-ratio": mediaAspect(),
           "view-transition-name": `scene-${scene().id}`,
         }}
-        onClick={(e) => {
-          if ((e.target as Element).closest("button")) return;
-          navigate(`/scenes/${scene().id}`);
-        }}
+        onClick={handleMediaClick}
       >
         <Show when={posterUrl()}>
           {(url) => (
@@ -157,6 +176,31 @@ export default function SceneCard(props: Props) {
             onPlay={() => prefetch(`/scenes/${scene().id}`)}
           />
         </Show>
+
+        <MediaActionRail
+          mediaId={scene().id}
+          mediaType="scene"
+          initialLikes={scene().o_counter ?? 0}
+          commentCount={scene().commentCount}
+          title={scene().title}
+          thumbnailUrl={scene().paths.screenshot ?? undefined}
+        />
+
+        {/* Double-tap heart burst */}
+        <Show when={heart()}>
+          <div class="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+            <svg
+              class="heart-burst"
+              width="72"
+              height="72"
+              viewBox="0 0 24 24"
+              fill="white"
+              style={{ filter: "drop-shadow(0 2px 10px rgba(0,0,0,0.45))" }}
+            >
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+          </div>
+        </Show>
       </div>
 
       {/* Studio meta */}
@@ -183,7 +227,7 @@ export default function SceneCard(props: Props) {
         />
         <a
           href={`/scenes/${scene().id}`}
-          class="inline-flex items-center gap-1.5 px-3 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] border border-[var(--color-border)] active:scale-95 transition-all hover:text-[var(--color-text)] min-h-[44px]"
+          class="inline-flex items-center gap-1.5 px-3 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] active:scale-95 transition-all hover:text-[var(--color-text)] min-h-[44px]"
         >
           <svg
             width="13"
@@ -204,7 +248,7 @@ export default function SceneCard(props: Props) {
         <button
           onClick={handleShare}
           aria-label="Share"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] border border-[var(--color-border)] active:scale-95 transition-all hover:text-[var(--color-text)]"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] active:scale-95 transition-all hover:text-[var(--color-text)]"
         >
           <svg
             width="13"

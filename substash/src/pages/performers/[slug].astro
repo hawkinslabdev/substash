@@ -10,6 +10,7 @@ import { FIND_PERFORMER, FIND_SCENES, FIND_IMAGES } from "@/lib/stash/queries";
 import { proxyImage } from "@/lib/stash/image";
 import { encodeCursor, nextCursor } from "@/lib/utils/cursor";
 import { sceneToFeedItem, imageToFeedItem } from "@/lib/stash/feed-item";
+import { attachCommentCounts } from "@/lib/db/comment-counts";
 import type { FindPerformerQuery, FindScenesQuery, FindImagesQuery } from "@/lib/stash/types";
 import { filterByTags } from "@/lib/stash/filter";
 import { DEMO_MODE } from "astro:env/server";
@@ -69,8 +70,8 @@ if (DEMO_MODE) {
   const filteredScenes = filterByTags(scenesData.findScenes.scenes);
   const filteredImages = filterByTags(imagesData.findImages.images);
 
-  const scenes = filteredScenes.map(sceneToFeedItem);
-  const images = filteredImages.map(imageToFeedItem);
+  const scenes = attachCommentCounts(filteredScenes.map(sceneToFeedItem));
+  const images = attachCommentCounts(filteredImages.map(imageToFeedItem));
 
   const interleaved: typeof items = [];
   const maxLen = Math.max(scenes.length, images.length);
@@ -91,7 +92,7 @@ const displayName = performer?.name ?? slug;
 ---
 
 <PageShell title={`Substash: ${displayName}`}>
-  <header class="sticky top-0 z-10 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)]">
+  <header class="header-glass sticky top-0 z-10">
     <div class="flex items-center gap-3 px-4 py-3">
       <a href="/performers" class="text-[var(--color-text-muted)]">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

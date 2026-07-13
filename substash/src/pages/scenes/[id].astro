@@ -5,6 +5,8 @@ import BlurHash from "@/components/ui/BlurHash.astro";
 import VoteButton from "@/components/post/VoteButton.solid";
 import ShareButton from "@/components/post/ShareButton.astro";
 import CommentSection from "@/components/post/CommentSection.solid";
+import MediaActionRail from "@/components/feed/MediaActionRail.solid";
+import { getCommentCounts } from "@/lib/db/comment-counts";
 import { stashRequest } from "@/lib/stash/client";
 import { FIND_SCENE } from "@/lib/stash/queries";
 import { proxyImage } from "@/lib/stash/image";
@@ -61,6 +63,7 @@ const originHref = originQuery
   : "/discover";
 const creditLine = sub.credit;
 const dayDisplay = sub.day;
+const commentCount = getCommentCounts([id]).get(id) ?? 0;
 ---
 
 <PageShell
@@ -68,7 +71,7 @@ const dayDisplay = sub.day;
   preloadUrl={scene.paths.screenshot ?? undefined}
   preloadAs="image"
 >
-  <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)] border-b border-[var(--color-border)] flex items-center gap-3">
+  <header class="header-glass sticky top-0 z-10 px-4 py-3 flex items-center gap-3">
     <button onclick="history.back()" aria-label="Go back" class="text-[var(--color-text-muted)]">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
@@ -98,8 +101,18 @@ const dayDisplay = sub.day;
         controls
         muted
         playsinline
-        preload="none"
+        preload="metadata"
         class="relative w-full h-full object-contain"
+      />
+      <MediaActionRail
+        client:visible
+        mediaId={scene.id}
+        mediaType="scene"
+        initialLikes={scene.o_counter ?? 0}
+        commentCount={commentCount}
+        title={displayTitle}
+        thumbnailUrl={scene.paths.screenshot ?? undefined}
+        bottomOffset="56px"
       />
     </div>
   ) : (
@@ -143,7 +156,7 @@ const dayDisplay = sub.day;
       )}
     </div>
 
-    <h1 class="text-base font-semibold leading-snug">{displayTitle}</h1>
+    <h1 class="text-[17px] font-semibold leading-snug tracking-[-0.01em] [text-wrap:balance]">{displayTitle}</h1>
 
     <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--color-text-muted)]">
       {scene.studio && (
@@ -194,7 +207,7 @@ const dayDisplay = sub.day;
         href={`/api/stash/open?type=scene&id=${id}`}
         target="_blank"
         rel="noopener noreferrer"
-        class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] border border-[var(--color-border)] active:scale-95 transition-all hover:text-[var(--color-text)] min-h-[44px]"
+        class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] active:scale-95 transition-all hover:text-[var(--color-text)] min-h-[44px]"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>

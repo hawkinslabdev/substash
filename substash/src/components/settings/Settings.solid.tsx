@@ -54,6 +54,23 @@ export default function Settings(props: Props) {
     }
   }
 
+  const [themeMode, setThemeModeSignal] = createSignal(
+    localStorage.getItem("substash:theme") ?? "dark",
+  );
+  function setThemeMode(key: "dark" | "oled") {
+    setThemeModeSignal(key);
+    if (key === "oled") {
+      localStorage.setItem("substash:theme", "oled");
+      document.documentElement.setAttribute("data-theme", "oled");
+    } else {
+      localStorage.removeItem("substash:theme");
+      document.documentElement.removeAttribute("data-theme");
+    }
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", key === "oled" ? "#000000" : "#0d0d0d");
+  }
+
   const [feedFallbackName, setFeedFallbackName] = createSignal(
     props.feedFallbackName,
   );
@@ -524,6 +541,59 @@ export default function Settings(props: Props) {
       {/* DISPLAY */}
       <SectionLabel>Display</SectionLabel>
       <div class="border-t border-b border-[var(--color-border)]">
+        {/* Theme mode */}
+        <div class="px-4 py-4 border-b border-[var(--color-border)]">
+          <p class="text-xs text-[var(--color-text-muted)] mb-3">Appearance</p>
+          <div class="flex gap-3">
+            <For
+              each={
+                [
+                  {
+                    key: "dark",
+                    label: "Warm dark",
+                    bg: "#0d0d0d",
+                    card: "#1e1e1e",
+                  },
+                  {
+                    key: "oled",
+                    label: "OLED black",
+                    bg: "#000000",
+                    card: "#141414",
+                  },
+                ] as const
+              }
+            >
+              {(mode) => (
+                <button
+                  onClick={() => setThemeMode(mode.key)}
+                  aria-pressed={themeMode() === mode.key}
+                  class={`flex flex-col items-start gap-2 p-3 rounded-[var(--radius-control)] border transition-colors ${
+                    themeMode() === mode.key
+                      ? "border-[var(--color-accent)]"
+                      : "border-[var(--color-border)] hover:border-[var(--color-text-muted)]/40"
+                  }`}
+                  style={{ background: mode.bg }}
+                >
+                  <span
+                    class="block w-16 h-8 rounded-md border border-[var(--color-border)]"
+                    style={{ background: mode.card }}
+                    aria-hidden="true"
+                  />
+                  <span
+                    class={`text-xs font-medium ${
+                      themeMode() === mode.key
+                        ? "text-[var(--color-text)]"
+                        : "text-[var(--color-text-muted)]"
+                    }`}
+                  >
+                    {mode.label}
+                  </span>
+                </button>
+              )}
+            </For>
+          </div>
+        </div>
+
         {/* Accent theme */}
         <div class="px-4 py-4 border-b border-[var(--color-border)]">
           <p class="text-xs text-[var(--color-text-muted)] mb-3">

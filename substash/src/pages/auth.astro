@@ -14,6 +14,11 @@ const from = Astro.url.searchParams.get("from") ?? "/";
       (function () {
         const accent = localStorage.getItem('substash:accent');
         if (accent) document.documentElement.setAttribute('data-accent', accent);
+        const theme = localStorage.getItem('substash:theme');
+        if (theme === 'oled') {
+          document.documentElement.setAttribute('data-theme', 'oled');
+          document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#000000');
+        }
       })();
     </script>
     <style>
@@ -26,7 +31,7 @@ const from = Astro.url.searchParams.get("from") ?? "/";
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 24px;
+        padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
       }
       .card {
         width: 100%;
@@ -36,78 +41,132 @@ const from = Astro.url.searchParams.get("from") ?? "/";
         align-items: center;
         gap: 28px;
       }
+
+      /* Staggered entrance — orients the user, runs once */
+      @keyframes rise-in {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .card > * {
+        animation: rise-in 480ms var(--ease-out-quart) backwards;
+      }
+      .card > :nth-child(2) { animation-delay: 60ms; }
+      .card > :nth-child(3) { animation-delay: 120ms; }
+      .card > :nth-child(4) { animation-delay: 160ms; }
+      .card > :nth-child(5) { animation-delay: 200ms; }
+
       .logo {
-        width: 48px;
-        height: 48px;
-        background: var(--color-accent);
-        border-radius: 12px;
+        width: 64px;
+        height: 64px;
+        background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+        border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+        color: var(--color-accent);
+        border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
       }
-      h1 { font-size: 1.125rem; font-weight: 600; }
-      p.sub { font-size: 0.8125rem; color: var(--color-text-muted); text-align: center; }
+      h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      p.sub {
+        font-size: 0.875rem;
+        color: var(--color-text-muted);
+        text-align: center;
+        line-height: 1.5;
+      }
       .boxes {
         display: flex;
         gap: 10px;
       }
       .box {
-        width: 44px;
-        height: 52px;
+        width: 46px;
+        height: 56px;
         background: var(--color-surface-3);
         border: 1.5px solid var(--color-border);
-        border-radius: 8px;
-        font-size: 1.25rem;
+        border-radius: 12px;
+        font-size: 1.375rem;
         font-weight: 600;
+        font-family: inherit;
         text-align: center;
         color: var(--color-text);
         caret-color: var(--color-accent);
         outline: none;
-        transition: border-color 0.15s;
+        transition: border-color 150ms ease, transform 150ms var(--ease-out-quart);
         text-transform: uppercase;
       }
-      .box:focus { border-color: var(--color-accent); }
+      .box:focus {
+        border-color: var(--color-accent);
+        transform: scale(1.05);
+      }
+      .box.filled {
+        border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+      }
+
+      /* Wrong PIN: shake the row */
+      @keyframes pin-shake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-7px); }
+        40% { transform: translateX(7px); }
+        60% { transform: translateX(-4px); }
+        80% { transform: translateX(4px); }
+      }
+      .boxes.shake {
+        animation: pin-shake 360ms var(--ease-out-quart);
+      }
+
       .btn {
         width: 100%;
-        height: 48px;
+        height: 50px;
         background: var(--color-accent);
         color: #fff;
         border: none;
-        border-radius: 10px;
+        border-radius: 12px;
         font-size: 0.9375rem;
         font-weight: 600;
+        font-family: inherit;
         cursor: pointer;
-        transition: background 0.15s, opacity 0.15s;
+        transition: background 150ms ease, opacity 150ms ease, transform 80ms ease;
       }
       .btn:hover { background: var(--color-accent-hover); }
-      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .btn:active { transform: scale(0.97); }
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
       .error {
         font-size: 0.8125rem;
         color: var(--color-accent);
         text-align: center;
         min-height: 1.2em;
       }
+
+      @media (prefers-reduced-motion: reduce) {
+        .card > * { animation: none; }
+        .boxes.shake { animation: none; }
+        .box:focus { transform: none; }
+        .btn:active { transform: none; }
+      }
     </style>
   </head>
   <body>
     <div class="card">
       <div class="logo">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
           <path stroke-linecap="round" stroke-linejoin="round" d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
       </div>
-      <div style="text-align:center;display:flex;flex-direction:column;gap:6px">
-        <h1>Enter PIN</h1>
-        <p class="sub">Enter your 6-character PIN to unlock Substash.</p>
+      <div style="text-align:center;display:flex;flex-direction:column;gap:8px">
+        <h1>Welcome back</h1>
+        <p class="sub">Enter your 6-digit PIN to unlock Substash.</p>
       </div>
       <div class="boxes" id="boxes">
-        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="0" />
-        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="1" />
-        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="2" />
-        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="3" />
-        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="4" />
-        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="5" />
+        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="0" aria-label="PIN digit 1" />
+        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="1" aria-label="PIN digit 2" />
+        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="2" aria-label="PIN digit 3" />
+        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="3" aria-label="PIN digit 4" />
+        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="4" aria-label="PIN digit 5" />
+        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="5" aria-label="PIN digit 6" />
       </div>
       <p class="error" id="error" aria-live="polite"></p>
       <button class="btn" id="btn" type="button">Unlock</button>
@@ -115,15 +174,21 @@ const from = Astro.url.searchParams.get("from") ?? "/";
 
     <script is:inline define:vars={{ from }}>
       const boxes = Array.from(document.querySelectorAll('.box'));
+      const boxRow = document.getElementById('boxes');
       const btn = document.getElementById('btn');
       const err = document.getElementById('error');
 
       boxes[0].focus();
 
+      function syncFilled() {
+        boxes.forEach((b) => b.classList.toggle('filled', !!b.value));
+      }
+
       boxes.forEach((box, i) => {
         box.addEventListener('input', (e) => {
           const val = e.target.value.replace(/[^0-9]/g, '').slice(-1);
           e.target.value = val;
+          syncFilled();
           if (val && i < 5) boxes[i + 1].focus();
           if (i === 5 && val) attempt();
         });
@@ -131,21 +196,31 @@ const from = Astro.url.searchParams.get("from") ?? "/";
           if (e.key === 'Backspace' && !e.target.value && i > 0) {
             boxes[i - 1].focus();
             boxes[i - 1].value = '';
+            syncFilled();
           }
         });
         box.addEventListener('paste', (e) => {
           e.preventDefault();
           const text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '').slice(0, 6);
           text.split('').forEach((ch, j) => { if (boxes[j]) boxes[j].value = ch; });
+          syncFilled();
           if (text.length === 6) attempt();
         });
       });
 
       btn.addEventListener('click', attempt);
 
+      function fail(message) {
+        err.textContent = message;
+        boxRow.classList.remove('shake');
+        void boxRow.offsetWidth; // restart the animation
+        boxRow.classList.add('shake');
+        navigator.vibrate?.([12, 40, 12]);
+      }
+
       async function attempt() {
         const pin = boxes.map(b => b.value).join('');
-        if (pin.length < 6) { err.textContent = 'Enter all 6 characters.'; return; }
+        if (pin.length < 6) { fail('Enter all 6 digits.'); return; }
         btn.disabled = true;
         err.textContent = '';
         try {
@@ -156,15 +231,16 @@ const from = Astro.url.searchParams.get("from") ?? "/";
           });
           const data = await res.json();
           if (!res.ok) {
-            err.textContent = data.error || 'Incorrect PIN.';
+            fail(data.error || 'Incorrect PIN.');
             boxes.forEach(b => b.value = '');
+            syncFilled();
             boxes[0].focus();
             btn.disabled = false;
             return;
           }
           window.location.href = from;
         } catch {
-          err.textContent = 'Network error. Try again.';
+          fail('Network error. Try again.');
           btn.disabled = false;
         }
       }

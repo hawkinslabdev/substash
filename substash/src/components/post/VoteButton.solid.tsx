@@ -1,7 +1,7 @@
 import { createSignal, For, Show } from "solid-js";
 import { cn } from "@/lib/utils/cn";
 import { formatCount } from "@/lib/utils/format";
-import { showToast } from "@/lib/utils/toast";
+import { useVote } from "@/lib/hooks/useVote";
 
 const PARTICLES = [0, 45, 90, 135, 180, 225, 270, 315].map((deg) => ({
   x: Math.round(Math.cos((deg * Math.PI) / 180) * 24),
@@ -19,70 +19,49 @@ interface Props {
 }
 
 export default function VoteButton(props: Props) {
-  // No persistent vote memory meaning each page visit gets a fresh like.
-  const [count, setCount] = createSignal(props.initialCount);
-  const [pending, setPending] = createSignal(false);
-  const [voted, setVoted] = createSignal(false);
+  // Shared per-media store: keeps this button in sync with the in-media
+  // action rail. No persistent vote memory — each page visit gets a fresh like.
+  const store = useVote({
+    id: (props.sceneId ?? props.imageId)!,
+    mediaType: props.imageId ? "image" : "scene",
+    type: props.type,
+    initialCount: props.initialCount,
+    title: props.title,
+    thumbnailUrl: props.thumbnailUrl,
+  });
   const [bursting, setBursting] = createSignal(false);
 
   async function handleVote() {
-    if (pending() || voted()) return;
-    setPending(true);
-    setCount((c) => c + 1);
-    setVoted(true);
+    if (store.pending() || store.voted()) return;
 
     setBursting(false);
     requestAnimationFrame(() => setBursting(true));
     setTimeout(() => setBursting(false), 400);
 
-    navigator.vibrate?.(10);
-    try {
-      const res = await fetch("/api/stash/vote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: props.sceneId ?? props.imageId,
-          type: props.type,
-          mediaType: props.imageId ? "image" : "scene",
-          title: props.title,
-          thumbnailUrl: props.thumbnailUrl,
-        }),
-      });
-      if (!res.ok) {
-        setCount((c) => c - 1);
-        setVoted(false);
-      } else {
-        showToast("Liked");
-      }
-    } catch {
-      setCount((c) => c - 1);
-      setVoted(false);
-    } finally {
-      setPending(false);
-    }
+    await store.vote();
   }
 
   return (
     <div class="relative inline-flex shrink-0">
       <button
         onClick={handleVote}
-        disabled={pending()}
+        disabled={store.pending()}
         aria-label={props.label ?? "Vote"}
         class={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-          "border border-[var(--color-border)] active:scale-95",
+          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium tabular-nums transition-all",
+          "active:scale-95",
           bursting() && "vote-pop",
-          voted()
-            ? "bg-[var(--color-accent)] border-[var(--color-accent)] text-white"
+          store.voted()
+            ? "bg-[var(--color-accent)] text-white"
             : "bg-[var(--color-surface-3)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
-          pending() && "opacity-60 cursor-not-allowed",
+          store.pending() && "opacity-60 cursor-not-allowed",
         )}
       >
         <svg
           width="14"
           height="14"
           viewBox="0 0 24 24"
-          fill={voted() ? "currentColor" : "none"}
+          fill={store.voted() ? "currentColor" : "none"}
           stroke="currentColor"
           stroke-width="2.5"
         >
@@ -92,7 +71,7 @@ export default function VoteButton(props: Props) {
             d="M12 19V5M5 12l7-7 7 7"
           />
         </svg>
-        {formatCount(count())}
+        {formatCount(store.count())}
       </button>
       <Show when={bursting()}>
         <For each={PARTICLES}>

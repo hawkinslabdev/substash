@@ -3,11 +3,13 @@ import {
   type RequestDocument,
   type Variables,
 } from "graphql-request";
-import { STASH_URL, STASH_API_KEY } from "astro:env/server";
+import { STASH_URL, STASH_API_KEY, STASH_TIMEOUT_MS } from "astro:env/server";
 import http from "http";
 import https from "https";
 
-const TIMEOUT_MS = 5000;
+// Configurable: dev-server warmup and busy Stash instances (scans) need more
+// headroom than a fast LAN round-trip suggests.
+const TIMEOUT_MS = STASH_TIMEOUT_MS;
 
 const agent = new (STASH_URL.startsWith("https") ? https : http).Agent({
   keepAlive: true,
@@ -33,20 +35,61 @@ const client = new GraphQLClient(`${STASH_URL}/graphql`, {
   },
 });
 
+// Circuit breaker: when Stash is busy (scanning/generating) every request
+// hangs for the full timeout and SSR pages block on it, freezing navigation
+// (issue #5). After a couple of consecutive connection failures we fail fast
+// instead, and only let a single probe request through per cooldown window.
+const BREAKER_THRESHOLD = 2;
+const BREAKER_COOLDOWN_MS = 15_000;
+let consecutiveFailures = 0;
+let lastFailureAt = 0;
+let probeInFlight = false;
+
+function breakerIsOpen(): boolean {
+  return consecutiveFailures >= BREAKER_THRESHOLD;
+}
+
+function recordSuccess() {
+  consecutiveFailures = 0;
+  probeInFlight = false;
+}
+
+function recordConnectionFailure() {
+  consecutiveFailures += 1;
+  lastFailureAt = Date.now();
+  probeInFlight = false;
+}
+
 export async function stashRequest<T>(
   query: RequestDocument,
   variables?: Variables,
 ): Promise<T> {
+  if (breakerIsOpen()) {
+    const cooledDown = Date.now() - lastFailureAt >= BREAKER_COOLDOWN_MS;
+    if (!cooledDown || probeInFlight) {
+      throw new StashConnectionError(
+        "Stash is busy or unreachable — failing fast until it recovers",
+      );
+    }
+    // One probe request per cooldown window checks whether Stash recovered
+    probeInFlight = true;
+  }
+
   try {
-    return await client.request<T>(query, variables);
+    const result = await client.request<T>(query, variables);
+    recordSuccess();
+    return result;
   } catch (err: unknown) {
     if (err instanceof DOMException && err.name === "AbortError") {
+      recordConnectionFailure();
       throw new StashConnectionError(
         `Stash request timed out after ${TIMEOUT_MS}ms`,
       );
     }
     // Surface the full error so it is visible in the server terminal
     if (err && typeof err === "object" && "response" in err) {
+      // Stash answered (GraphQL-level error) — the connection itself is fine
+      recordSuccess();
       const gqlErr = err as {
         response?: { errors?: unknown; status?: number };
       };
@@ -59,6 +102,7 @@ export async function stashRequest<T>(
         JSON.stringify(variables, null, 2),
       );
     } else {
+      recordConnectionFailure();
       console.error("[stashRequest] Network/unknown error:", err);
     }
     const cause = err instanceof Error ? err.message : String(err);

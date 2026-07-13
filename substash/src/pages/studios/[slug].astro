@@ -8,6 +8,7 @@ import { stashRequest } from "@/lib/stash/client";
 import { FIND_STUDIO, FIND_SCENES, FIND_IMAGES } from "@/lib/stash/queries";
 import { encodeCursor, nextCursor } from "@/lib/utils/cursor";
 import { sceneToFeedItem, imageToFeedItem } from "@/lib/stash/feed-item";
+import { attachCommentCounts } from "@/lib/db/comment-counts";
 import type { FindStudioQuery, FindScenesQuery, FindImagesQuery } from "@/lib/stash/types";
 import { filterByTags } from "@/lib/stash/filter";
 import { DEMO_MODE } from "astro:env/server";
@@ -67,8 +68,8 @@ if (DEMO_MODE) {
   const filteredScenes = filterByTags(scenesData.findScenes.scenes);
   const filteredImages = filterByTags(imagesData.findImages.images);
 
-  const scenes = filteredScenes.map(sceneToFeedItem);
-  const images = filteredImages.map(imageToFeedItem);
+  const scenes = attachCommentCounts(filteredScenes.map(sceneToFeedItem));
+  const images = attachCommentCounts(filteredImages.map(imageToFeedItem));
 
   const interleaved: typeof items = [];
   const maxLen = Math.max(scenes.length, images.length);
@@ -88,7 +89,7 @@ const cursorPayload = { page: 1, perPage: 20, total: count, sort, studioId: slug
 ---
 
 <PageShell title={`Substash: ${displayName}`}>
-  <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)] flex items-center gap-3">
+  <header class="header-glass sticky top-0 z-10 px-4 py-3 flex items-center gap-3">
     <a href="/studios" class="text-[var(--color-text-muted)]">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />

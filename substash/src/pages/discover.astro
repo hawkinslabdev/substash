@@ -1,13 +1,13 @@
 ---
 import PageShell from "@/components/layout/PageShell.astro";
 import BottomNav from "@/components/layout/BottomNav.astro";
-import FeedContainer from "@/components/feed/FeedContainer.astro";
+import ImmersiveFeed from "@/components/feed/ImmersiveFeed.solid";
 import StashOffline from "@/components/ui/StashOffline.astro";
-import SortBar from "@/components/ui/SortBar.astro";
 import { stashRequest } from "@/lib/stash/client";
 import { FIND_SCENES, FIND_IMAGES } from "@/lib/stash/queries";
 import { encodeCursor, nextCursor, type CursorPayload } from "@/lib/utils/cursor";
 import { sceneToFeedItem, imageToFeedItem } from "@/lib/stash/feed-item";
+import { attachCommentCounts } from "@/lib/db/comment-counts";
 import type { FindScenesQuery, FindImagesQuery } from "@/lib/stash/types";
 import { filterByTags } from "@/lib/stash/filter";
 import { DEMO_MODE } from "astro:env/server";
@@ -61,8 +61,8 @@ if (DEMO_MODE) {
   const filteredScenes = filterByTags(scenesData.findScenes.scenes);
   const filteredImages = filterByTags(imagesData.findImages.images);
 
-  const scenes = filteredScenes.map(sceneToFeedItem);
-  const images = filteredImages.map(imageToFeedItem);
+  const scenes = attachCommentCounts(filteredScenes.map(sceneToFeedItem));
+  const images = attachCommentCounts(filteredImages.map(imageToFeedItem));
 
   const interleaved: typeof items = [];
   const maxLen = Math.max(scenes.length, images.length);
@@ -81,31 +81,29 @@ const cursorPayload: CursorPayload = { page: 1, perPage: 20, total: count, sort,
 ---
 
 <PageShell title="Substash: Discover">
-  <header class="sticky top-0 z-10 px-4 py-3 bg-[var(--color-surface)]/90 backdrop-blur border-b border-[var(--color-border)]">
-    <h1 class="text-base font-semibold">
-      <img
-        src="/logo.svg" alt="Substash logo" class="inline w-5 h-5 mr-1 -mt-0.5"
-        />
-      Discover
-    </h1>
-  </header>
-
-  <SortBar sort={sort} baseUrl="/discover" sorts={[
-    { key: "random", label: "Random" },
-    { key: "date", label: "Recent" },
-    { key: "rating", label: "Top" },
-  ]} />
-
   {offline ? (
     <StashOffline />
   ) : (
-    <FeedContainer
-      initialItems={items}
-      initialCursor={encodeCursor(cursorPayload)}
-      initialNextCursor={nextCursor(cursorPayload)}
-      initialTotal={count}
-      sort={sort}
-    />
+    <>
+      {/* Fullscreen placeholder while the island hydrates */}
+      <div
+        data-immersive-skeleton
+        class="fixed inset-0 z-10 bg-black flex items-center justify-center lg:left-[var(--sidebar-width-desktop)] lg:top-[var(--header-height)]"
+        aria-hidden="true"
+      >
+        <div class="w-6 h-6 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin"></div>
+      </div>
+      <ImmersiveFeed
+        client:only="solid-js"
+        sort={sort}
+        initialData={{
+          items,
+          cursor: encodeCursor(cursorPayload),
+          nextCursor: nextCursor(cursorPayload),
+          total: count,
+        }}
+      />
+    </>
   )}
 
   <BottomNav slot="nav" />

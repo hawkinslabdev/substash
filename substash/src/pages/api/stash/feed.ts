@@ -12,9 +12,7 @@ import {
   type ImageFeedItem,
 } from "@/lib/stash/feed-item";
 import { encodeCursor, decodeCursor, nextCursor } from "@/lib/utils/cursor";
-import { db } from "@/lib/db";
-import { comments } from "@/lib/db/schema";
-import { count, inArray } from "drizzle-orm";
+import { getCommentCounts } from "@/lib/db/comment-counts";
 import { filterByTags } from "@/lib/stash/filter";
 
 const PER_PAGE = 20;
@@ -121,17 +119,15 @@ export const GET: APIRoute = async ({ request }) => {
     const totalCount =
       scenesData.findScenes.count + imagesData.findImages.count;
 
+    // Local comment counts ride along on every item (in-media action rail)
+    const commentMap = getCommentCounts([
+      ...scenes.map((s) => s.id),
+      ...images.map((i) => i.id),
+    ]);
+    for (const s of scenes) s.commentCount = commentMap.get(s.id) ?? 0;
+    for (const i of images) i.commentCount = commentMap.get(i.id) ?? 0;
+
     if (sort === "rating") {
-      const allIds = [...scenes.map((s) => s.id), ...images.map((i) => i.id)];
-      let commentMap = new Map<string, number>();
-      if (allIds.length > 0) {
-        const rows = await db
-          .select({ stashId: comments.stashId, n: count() })
-          .from(comments)
-          .where(inArray(comments.stashId, allIds))
-          .groupBy(comments.stashId);
-        commentMap = new Map(rows.map((r) => [r.stashId, r.n]));
-      }
       scenes = scenes.sort(
         (a, b) =>
           compositeScore(b.rating100, b.o_counter, commentMap.get(b.id) ?? 0) -

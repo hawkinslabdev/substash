@@ -26,6 +26,12 @@ export default defineConfig({
         access: "secret",
         optional: true,
       }),
+      STASH_TIMEOUT_MS: envField.number({
+        context: "server",
+        access: "secret",
+        optional: true,
+        default: 8000,
+      }),
       DB_PATH: envField.string({
         context: "server",
         access: "secret",
