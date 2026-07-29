@@ -17,7 +17,7 @@
     "prepare": "cd .. && husky substash/.husky"
   },
   "dependencies": {
-    "@astrojs/node": "^11.0.0",
+    "@astrojs/node": "^11.0.2",
     "@astrojs/solid-js": "^7.0.0",
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/solid-query": "^5.100.14",
