@@ -494,6 +494,7 @@ export const DEMO_ITEMS: ImageFeedItem[] = TOP_50_MEMES.map((meme, i) => {
     type: "image" as const,
     title,
     subreddit: templateId,
+    subredditExtracted: true,
     subredditDisplay:
       templateId.charAt(0).toUpperCase() +
       templateId.slice(1).replace(/-/g, " "),
@@ -648,7 +649,7 @@ export function getDemoImage(id: string): StashImage | undefined {
     studio: item.studio ? { id: item.studio.id, name: item.studio.name } : null,
     performers: item.performers,
     tags: item.tags,
-    files: [{ id, path: null, basename: null, width: 800, height: 600 }],
+    files: [{ path: "", basename: "", width: 800, height: 600 }],
     visual_files: [],
   };
 }

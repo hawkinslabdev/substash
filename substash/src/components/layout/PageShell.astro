@@ -103,7 +103,7 @@ const {
           sessionStorage.setItem(SCROLL_KEY(location.href), String(Math.round(window.scrollY)));
         } catch { /* quota */ }
 
-        const ev = e as TransitionBeforePreparationEvent;
+        const ev = e as Event & { navigationType: string; to: URL };
         // Expose nav type so Feed islands can detect back-nav without depending
         // on astro:after-swap timing (which fires before client:only hydration).
         try { sessionStorage.setItem('substash:last-nav-type', ev.navigationType); } catch {}

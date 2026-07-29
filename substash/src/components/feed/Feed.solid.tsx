@@ -284,7 +284,7 @@ function FeedInner(props: Props) {
         ),
         JSON.stringify({
           pages: data.pages,
-          pageParams: data.pageParams,
+          pageParams: data.pageParams as (string | null)[],
           savedAt: Date.now(),
         } satisfies FeedCache),
       );

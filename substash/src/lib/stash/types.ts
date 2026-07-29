@@ -33,7 +33,6 @@ export type StashStudio = {
   name: string;
   image_path: Maybe<string>;
   scene_count: Maybe<number>;
-  url: Maybe<string>;
 };
 
 export type StashPerformer = {
@@ -50,6 +49,8 @@ export type StashScene = {
   title: Maybe<string>;
   date: Maybe<string>;
   created_at: Maybe<string>;
+  /** Only selected by FIND_SCENE, not the list queries. */
+  details?: Maybe<string>;
   rating100: Maybe<number>;
   o_counter: Maybe<number>;
   play_count: Maybe<number>;
@@ -126,6 +127,8 @@ export type StashImage = {
   title: Maybe<string>;
   date: Maybe<string>;
   created_at: Maybe<string>;
+  /** Only selected by FIND_IMAGE, not the list queries. */
+  details?: Maybe<string>;
   rating100: Maybe<number>;
   o_counter: Maybe<number>;
   paths: StashImagePaths;
