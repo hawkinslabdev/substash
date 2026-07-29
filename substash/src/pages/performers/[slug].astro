@@ -88,7 +88,7 @@ if (DEMO_MODE) {
 }
 
 const cursorPayload = { page: 1, perPage: 20, total: count, sort, performerId: slug };
-const displayName = performer?.name ?? slug;
+const displayName = performer?.name ?? slug ?? "Performer";
 ---
 
 <PageShell title={`Substash: ${displayName}`}>

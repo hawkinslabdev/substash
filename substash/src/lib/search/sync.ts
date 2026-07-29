@@ -128,18 +128,19 @@ async function syncMedia(): Promise<number> {
   let hasMoreImages = true;
 
   while (hasMoreScenes || hasMoreImages) {
-    const [scenesData, imagesData] = await Promise.all([
-      hasMoreScenes
-        ? stashRequest<FindScenesQuery>(FIND_SCENES, {
-            filter: { page, per_page: SYNC_PAGE_SIZE, sort: "id" },
-          }).catch(() => ({ findScenes: { count: 0, scenes: [] } }))
-        : Promise.resolve({ findScenes: { count: 0, scenes: [] } }),
-      hasMoreImages
-        ? stashRequest<FindImagesQuery>(FIND_IMAGES, {
-            filter: { page, per_page: SYNC_PAGE_SIZE, sort: "id" },
-          }).catch(() => ({ findImages: { count: 0, images: [] } }))
-        : Promise.resolve({ findImages: { count: 0, images: [] } }),
-    ]);
+    const [scenesData, imagesData]: [FindScenesQuery, FindImagesQuery] =
+      await Promise.all([
+        hasMoreScenes
+          ? stashRequest<FindScenesQuery>(FIND_SCENES, {
+              filter: { page, per_page: SYNC_PAGE_SIZE, sort: "id" },
+            }).catch(() => ({ findScenes: { count: 0, scenes: [] } }))
+          : Promise.resolve({ findScenes: { count: 0, scenes: [] } }),
+        hasMoreImages
+          ? stashRequest<FindImagesQuery>(FIND_IMAGES, {
+              filter: { page, per_page: SYNC_PAGE_SIZE, sort: "id" },
+            }).catch(() => ({ findImages: { count: 0, images: [] } }))
+          : Promise.resolve({ findImages: { count: 0, images: [] } }),
+      ]);
 
     const sceneRows: CacheRow[] = scenesData.findScenes.scenes.map((s) => {
       const item = sceneToFeedItem(s);
