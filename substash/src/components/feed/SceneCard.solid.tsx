@@ -38,6 +38,8 @@ export default function SceneCard(props: Props) {
     thumbnailUrl: props.scene.paths.screenshot ?? undefined,
   });
   const [heart, setHeart] = createSignal(false);
+  // Action bar and in-media rail open the same sheet
+  const [commentsOpen, setCommentsOpen] = createSignal(false);
   let tapTimer: number | undefined;
 
   function handleMediaClick(e: MouseEvent) {
@@ -184,6 +186,8 @@ export default function SceneCard(props: Props) {
           commentCount={scene().commentCount}
           title={scene().title}
           thumbnailUrl={scene().paths.screenshot ?? undefined}
+          sheetOpen={commentsOpen}
+          onSheetOpenChange={setCommentsOpen}
         />
 
         {/* Double-tap heart burst */}
@@ -225,8 +229,8 @@ export default function SceneCard(props: Props) {
           title={scene().title ?? undefined}
           thumbnailUrl={scene().paths.screenshot ?? undefined}
         />
-        <a
-          href={`/scenes/${scene().id}`}
+        <button
+          onClick={() => setCommentsOpen(true)}
           class="inline-flex items-center gap-1.5 px-3 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] active:scale-95 transition-all hover:text-[var(--color-text)] min-h-[44px]"
         >
           <svg
@@ -244,7 +248,7 @@ export default function SceneCard(props: Props) {
             />
           </svg>
           Comments
-        </a>
+        </button>
         <button
           onClick={handleShare}
           aria-label="Share"

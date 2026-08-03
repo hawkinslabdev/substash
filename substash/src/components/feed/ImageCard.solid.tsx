@@ -29,6 +29,8 @@ export default function ImageCard(props: Props) {
     thumbnailUrl: props.image.paths.thumbnail ?? undefined,
   });
   const [heart, setHeart] = createSignal(false);
+  // Action bar and in-media rail open the same sheet
+  const [commentsOpen, setCommentsOpen] = createSignal(false);
   let tapTimer: number | undefined;
 
   function handleMediaClick(e: MouseEvent) {
@@ -222,6 +224,8 @@ export default function ImageCard(props: Props) {
           commentCount={image().commentCount}
           title={image().title}
           thumbnailUrl={image().paths.thumbnail ?? undefined}
+          sheetOpen={commentsOpen}
+          onSheetOpenChange={setCommentsOpen}
         />
 
         {/* Double-tap heart burst */}
@@ -263,8 +267,8 @@ export default function ImageCard(props: Props) {
           title={image().title ?? undefined}
           thumbnailUrl={image().paths.thumbnail ?? undefined}
         />
-        <a
-          href={`/images/${image().id}`}
+        <button
+          onClick={() => setCommentsOpen(true)}
           class="inline-flex items-center gap-1.5 px-3 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] active:scale-95 transition-all hover:text-[var(--color-text)] min-h-[44px]"
         >
           <svg
@@ -282,7 +286,7 @@ export default function ImageCard(props: Props) {
             />
           </svg>
           Comments
-        </a>
+        </button>
         <button
           onClick={handleShare}
           aria-label="Share"

@@ -15,6 +15,9 @@ interface Props {
   bottomOffset?: string;
   /** Immersive mode: never idle-dim, stay at full opacity while visible */
   persistent?: boolean;
+  /** Lift sheet state to the parent so a card's action bar can open the same sheet */
+  sheetOpen?: () => boolean;
+  onSheetOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -35,7 +38,12 @@ export default function MediaActionRail(props: Props) {
 
   const [active, setActive] = createSignal(false);
   const [dimmed, setDimmed] = createSignal(false);
-  const [sheetOpen, setSheetOpen] = createSignal(false);
+  const [localSheetOpen, setLocalSheetOpen] = createSignal(false);
+  const sheetOpen = () => props.sheetOpen?.() ?? localSheetOpen();
+  const setSheetOpen = (open: boolean) =>
+    props.onSheetOpenChange
+      ? props.onSheetOpenChange(open)
+      : setLocalSheetOpen(open);
   const [likePop, setLikePop] = createSignal(false);
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
 

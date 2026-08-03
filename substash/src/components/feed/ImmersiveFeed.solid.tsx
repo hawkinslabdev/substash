@@ -15,6 +15,7 @@ import {
 import VideoPlayer from "./VideoPlayer.solid";
 import MediaActionRail from "./MediaActionRail.solid";
 import { fetchPage, type PageResult } from "./Feed.solid";
+import { anySheetOpen } from "@/components/post/CommentSheet.solid";
 import { useVote } from "@/lib/hooks/useVote";
 import { proxyImage } from "@/lib/stash/image";
 import type { FeedItem } from "@/lib/stash/feed-item";
@@ -32,6 +33,43 @@ const queryClient = new QueryClient({
 
 /** Clears the bottom nav pill: pill top ≈ safe-area + 76px */
 const OVERLAY_BOTTOM = "calc(env(safe-area-inset-bottom, 0px) + 88px)";
+
+const CACHE_TTL = 30 * 60 * 1000;
+
+interface ImmersiveCache {
+  pages: PageResult[];
+  pageParams: (string | null)[];
+  savedAt: number;
+}
+
+const cacheKey = (sort?: string) => `substash:immersive:${sort ?? "random"}`;
+const indexKey = (sort?: string) =>
+  `substash:immersive-index:${sort ?? "random"}`;
+
+// /api/stash/feed ignores the cursor seed, so caching pages is the only way to keep place
+function loadCache(sort?: string): ImmersiveCache | null {
+  try {
+    const raw = sessionStorage.getItem(cacheKey(sort));
+    if (!raw) return null;
+    const data: ImmersiveCache = JSON.parse(raw);
+    if (Date.now() - data.savedAt > CACHE_TTL) {
+      sessionStorage.removeItem(cacheKey(sort));
+      return null;
+    }
+    return data.pages?.length ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadIndex(sort?: string): number {
+  try {
+    const n = Number(sessionStorage.getItem(indexKey(sort)));
+    return Number.isInteger(n) && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
 
 function originHref(item: FeedItem): string {
   if (!item.subredditExtracted) return "/discover";
@@ -207,15 +245,24 @@ function ImmersiveInner(props: Props) {
   const [refreshKey, setRefreshKey] = createSignal(0);
   let touchStartY = 0;
 
+  // Read before any effect runs — the index effect below would overwrite it
+  const cached = loadCache(props.sort);
+  const savedIndex = cached ? loadIndex(props.sort) : 0;
+
   const query = createInfiniteQuery(() => ({
     queryKey: ["immersive-feed", props.sort, refreshKey()],
     queryFn: ({ pageParam }) =>
       fetchPage(pageParam as string | null, { sort: props.sort }),
     initialPageParam: null as string | null,
     getNextPageParam: (last: PageResult) => last.nextCursor ?? undefined,
+    // Cached pages beat SSR initialData: they carry every page the user scrolled
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    initialData: (refreshKey() === 0 && props.initialData
-      ? { pages: [props.initialData], pageParams: [null as string | null] }
+    initialData: (refreshKey() === 0
+      ? cached
+        ? { pages: cached.pages, pageParams: cached.pageParams }
+        : props.initialData
+          ? { pages: [props.initialData], pageParams: [null as string | null] }
+          : undefined
       : undefined) as any,
     initialDataUpdatedAt: refreshKey() === 0 ? Date.now() : undefined,
   }));
@@ -256,6 +303,32 @@ function ImmersiveInner(props: Props) {
     if (refreshing() && !query.isFetching) setRefreshing(false);
   });
 
+  // Persist pages + position so returning from a media page lands where you left
+  createEffect(() => {
+    const data = query.data;
+    if (!data || data.pages.length === 0) return;
+    try {
+      sessionStorage.setItem(
+        cacheKey(props.sort),
+        JSON.stringify({
+          pages: data.pages,
+          pageParams: data.pageParams as (string | null)[],
+          savedAt: Date.now(),
+        } satisfies ImmersiveCache),
+      );
+    } catch {
+      /* storage quota */
+    }
+  });
+
+  createEffect(() => {
+    try {
+      sessionStorage.setItem(indexKey(props.sort), String(active()));
+    } catch {
+      /* storage quota */
+    }
+  });
+
   // Refresh restarts from the top with a fresh random page
   createEffect(
     on(
@@ -263,6 +336,11 @@ function ImmersiveInner(props: Props) {
       () => {
         setActive(0);
         container?.scrollTo({ top: 0, behavior: "instant" });
+        try {
+          sessionStorage.removeItem(cacheKey(props.sort));
+        } catch {
+          /* storage unavailable */
+        }
       },
       { defer: true },
     ),
@@ -271,9 +349,24 @@ function ImmersiveInner(props: Props) {
   onMount(() => {
     document.querySelector("[data-immersive-skeleton]")?.remove();
 
+    // Restore position after the restored pages have rendered
+    if (savedIndex > 0) {
+      setActive(savedIndex);
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          if (!container) return;
+          container.scrollTo({
+            top: savedIndex * container.clientHeight,
+            behavior: "instant",
+          });
+        }),
+      );
+    }
+
     // Keyboard paging (desktop)
     function onKeydown(e: KeyboardEvent) {
       if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      if (anySheetOpen()) return;
       if ((e.target as Element)?.closest("input, textarea, [contenteditable]"))
         return;
       e.preventDefault();

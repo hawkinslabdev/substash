@@ -22,6 +22,13 @@ interface Props {
   thumbnailUrl?: string;
 }
 
+// Lets sibling islands (immersive arrow-key pager) stand down while a sheet is up
+const [openCount, setOpenCount] = createSignal(0);
+export const anySheetOpen = () => openCount() > 0;
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), textarea, select, [contenteditable], [tabindex]:not([tabindex="-1"])';
+
 /**
  * Bottom sheet wrapping CommentSection — lets the user read and write
  * comments while the media keeps playing behind it. Drag down or tap the
@@ -33,16 +40,26 @@ export default function CommentSheet(props: Props) {
   const [dragging, setDragging] = createSignal(false);
   let touchStartY = 0;
   let touchStartT = 0;
+  let sheet: HTMLDivElement | undefined;
+  let prevFocus: HTMLElement | null = null;
+  let counted = false;
 
   createEffect(() => {
     if (props.open) {
+      if (!counted) {
+        counted = true;
+        setOpenCount((n) => n + 1);
+      }
       document.body.style.overflow = "hidden";
+      prevFocus = document.activeElement as HTMLElement | null;
       // Mount first, then slide in on the next frame
-      requestAnimationFrame(() => setShown(true));
+      requestAnimationFrame(() => {
+        setShown(true);
+        sheet?.focus();
+      });
       document.addEventListener("keydown", onKeydown);
     } else {
-      document.body.style.overflow = "";
-      document.removeEventListener("keydown", onKeydown);
+      release();
       setShown(false);
       setDragY(0);
     }
@@ -50,9 +67,20 @@ export default function CommentSheet(props: Props) {
   onCleanup(() => {
     // Also runs during SSR disposal, where browser APIs don't exist
     if (typeof document === "undefined") return;
+    release();
+  });
+
+  /** Undo what open took over: scroll lock, keys, focus, counter */
+  function release() {
     document.body.style.overflow = "";
     document.removeEventListener("keydown", onKeydown);
-  });
+    if (counted) {
+      counted = false;
+      setOpenCount((n) => Math.max(0, n - 1));
+    }
+    prevFocus?.focus();
+    prevFocus = null;
+  }
 
   function requestClose() {
     setShown(false);
@@ -60,7 +88,26 @@ export default function CommentSheet(props: Props) {
   }
 
   function onKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape") requestClose();
+    if (e.key === "Escape") {
+      requestClose();
+      return;
+    }
+    if (e.key !== "Tab" || !sheet) return;
+    // Queried per keypress: the comment body mounts lazily via Suspense
+    const items = Array.from(sheet.querySelectorAll<HTMLElement>(FOCUSABLE));
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (!sheet.contains(document.activeElement)) {
+      e.preventDefault();
+      first.focus();
+    } else if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 
   function onTouchStart(e: TouchEvent) {
@@ -88,21 +135,25 @@ export default function CommentSheet(props: Props) {
   return (
     <Show when={props.open}>
       <Portal>
+        {/* Desktop: live inside the content column so the sheet lines up with its media */}
         <div
-          class="fixed inset-0 z-[90]"
+          class="fixed inset-0 z-[90] lg:left-[var(--sidebar-width-desktop)] lg:top-[var(--header-height)]"
           role="dialog"
           aria-modal="true"
           aria-label="Comments"
         >
-          {/* Backdrop */}
+          {/* Swallows wheel/touch: the immersive pager scrolls itself, not the document */}
           <div
-            class="absolute inset-0 bg-black/40 transition-opacity duration-300"
+            class="absolute inset-0 bg-black/40 transition-opacity duration-300 touch-none"
             classList={{ "opacity-0": !shown() }}
             onClick={requestClose}
+            onWheel={(e) => e.preventDefault()}
           />
           {/* Sheet */}
           <div
-            class="glass-strong absolute bottom-0 inset-x-0 lg:max-w-[720px] lg:mx-auto rounded-t-[var(--radius-sheet)] flex flex-col"
+            ref={sheet}
+            tabindex="-1"
+            class="glass-strong absolute bottom-0 inset-x-0 lg:max-w-[720px] lg:mx-auto rounded-t-[var(--radius-sheet)] flex flex-col focus:outline-none"
             style={{
               height: "75dvh",
               "border-bottom": "0",
