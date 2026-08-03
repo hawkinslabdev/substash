@@ -29,199 +29,308 @@ const from = Astro.url.searchParams.get("from") ?? "/";
         color: var(--color-text);
         font-family: var(--font-sans);
         display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: max(28px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom));
       }
-      .card {
-        width: 100%;
-        max-width: 360px;
+
+      /* Two soft accent blooms — depth only, no media, nothing to leak pre-auth */
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 0;
+      }
+      body::before {
+        width: min(120vw, 900px);
+        aspect-ratio: 1;
+        top: -40vh;
+        left: -30vw;
+        background: radial-gradient(circle at center, color-mix(in srgb, var(--color-accent) 13%, transparent) 0%, transparent 68%);
+      }
+      body::after {
+        width: min(90vw, 640px);
+        aspect-ratio: 1;
+        bottom: -28vh;
+        right: -22vw;
+        background: radial-gradient(circle at center, color-mix(in srgb, var(--color-accent) 8%, transparent) 0%, transparent 70%);
+      }
+      /* Pure black wants a quieter bloom — no shadows to carry it */
+      :root[data-theme="oled"] body::before {
+        background: radial-gradient(circle at center, color-mix(in srgb, var(--color-accent) 9%, transparent) 0%, transparent 68%);
+      }
+      :root[data-theme="oled"] body::after {
+        background: radial-gradient(circle at center, color-mix(in srgb, var(--color-accent) 5%, transparent) 0%, transparent 70%);
+      }
+
+      /* margin:auto not justify-content — keeps the top reachable on short viewports */
+      .shell {
+        position: relative;
+        z-index: 1;
+        margin: auto;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 28px;
+        gap: 40px;
       }
 
-      /* Staggered entrance — orients the user, runs once */
       @keyframes rise-in {
-        from { opacity: 0; transform: translateY(12px); }
+        from { opacity: 0; transform: translateY(16px); }
         to { opacity: 1; transform: translateY(0); }
       }
-      .card > * {
-        animation: rise-in 480ms var(--ease-out-quart) backwards;
-      }
-      .card > :nth-child(2) { animation-delay: 60ms; }
-      .card > :nth-child(3) { animation-delay: 120ms; }
-      .card > :nth-child(4) { animation-delay: 160ms; }
-      .card > :nth-child(5) { animation-delay: 200ms; }
+      .brand { animation: rise-in 520ms var(--ease-out-quart) backwards; }
+      .entry { animation: rise-in 520ms 90ms var(--ease-out-quart) backwards; }
 
+      .brand {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
       .logo {
-        width: 64px;
-        height: 64px;
-        background: color-mix(in srgb, var(--color-accent) 16%, transparent);
-        border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
-        color: var(--color-accent);
+        width: 60px;
+        height: 60px;
         border-radius: 20px;
+        background: var(--color-surface-2);
+        border: 1px solid var(--color-border);
         display: flex;
         align-items: center;
         justify-content: center;
+        margin-bottom: 22px;
       }
+      .logo img { width: 32px; height: 32px; display: block; }
       h1 {
-        font-size: 1.75rem;
+        font-size: 2rem;
         font-weight: 700;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
       }
       p.sub {
-        font-size: 0.875rem;
+        margin-top: 10px;
+        font-size: 0.9375rem;
         color: var(--color-text-muted);
-        text-align: center;
         line-height: 1.5;
       }
-      .boxes {
+
+      .entry {
         display: flex;
-        gap: 10px;
-      }
-      .box {
-        width: 46px;
-        height: 56px;
-        background: var(--color-surface-3);
-        border: 1.5px solid var(--color-border);
-        border-radius: 12px;
-        font-size: 1.375rem;
-        font-weight: 600;
-        font-family: inherit;
-        text-align: center;
-        color: var(--color-text);
-        caret-color: var(--color-accent);
-        outline: none;
-        transition: border-color 150ms ease, transform 150ms var(--ease-out-quart);
-        text-transform: uppercase;
-      }
-      .box:focus {
-        border-color: var(--color-accent);
-        transform: scale(1.05);
-      }
-      .box.filled {
-        border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+        flex-direction: column;
+        align-items: center;
       }
 
-      /* Wrong PIN: shake the row */
+      /* Six dots instead of six text inputs — no OS keyboard, nothing to shoulder-surf */
+      .dots { display: flex; gap: 16px; }
+      .dot {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        border: 1.5px solid var(--color-border);
+        transition:
+          background-color 180ms var(--ease-out-quart),
+          border-color 180ms var(--ease-out-quart),
+          transform 180ms var(--ease-spring);
+      }
+      .dot.on {
+        background: var(--color-accent);
+        border-color: var(--color-accent);
+        transform: scale(1.2);
+      }
+      .dots.ok .dot {
+        background: var(--color-accent);
+        border-color: var(--color-accent);
+        transform: scale(1.2);
+      }
+
       @keyframes pin-shake {
         0%, 100% { transform: translateX(0); }
-        20% { transform: translateX(-7px); }
-        40% { transform: translateX(7px); }
-        60% { transform: translateX(-4px); }
-        80% { transform: translateX(4px); }
+        20% { transform: translateX(-8px); }
+        40% { transform: translateX(8px); }
+        60% { transform: translateX(-5px); }
+        80% { transform: translateX(5px); }
       }
-      .boxes.shake {
-        animation: pin-shake 360ms var(--ease-out-quart);
+      .dots.shake { animation: pin-shake 380ms var(--ease-out-quart); }
+
+      .error {
+        min-height: 1.25em;
+        margin-top: 18px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: #f87171;
+        text-align: center;
       }
 
-      .btn {
-        width: 100%;
-        height: 50px;
-        background: var(--color-accent);
-        color: #fff;
-        border: none;
-        border-radius: 12px;
-        font-size: 0.9375rem;
-        font-weight: 600;
-        font-family: inherit;
-        cursor: pointer;
-        transition: background 150ms ease, opacity 150ms ease, transform 80ms ease;
+      .pad {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(3, 74px);
+        gap: 18px;
       }
-      .btn:hover { background: var(--color-accent-hover); }
-      .btn:active { transform: scale(0.97); }
-      .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-      .error {
-        font-size: 0.8125rem;
-        color: var(--color-accent);
-        text-align: center;
-        min-height: 1.2em;
+      .key {
+        width: 74px;
+        height: 74px;
+        border-radius: 50%;
+        background: var(--color-surface-2);
+        border: 1px solid var(--color-border);
+        color: var(--color-text);
+        font-family: inherit;
+        font-size: 1.5rem;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        cursor: pointer;
+        transition:
+          background-color 140ms ease,
+          border-color 140ms ease,
+          transform 90ms ease;
+      }
+      .key:hover {
+        background: var(--color-surface-3);
+        border-color: color-mix(in srgb, var(--color-accent) 32%, var(--color-border));
+      }
+      .key:active { transform: scale(0.92); }
+      .key.ghost {
+        background: transparent;
+        border-color: transparent;
+        color: var(--color-text-muted);
+      }
+      .key.ghost:hover {
+        background: var(--color-surface-2);
+        border-color: var(--color-border);
+        color: var(--color-text);
+      }
+      .key.spacer { visibility: hidden; pointer-events: none; }
+      .pad[data-busy] { pointer-events: none; opacity: 0.5; }
+
+      :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+
+      /* Desktop: side-by-side so the identity carries the width instead of a lone column */
+      @media (min-width: 900px) {
+        .shell {
+          flex-direction: row;
+          align-items: center;
+          gap: 88px;
+        }
+        .brand {
+          align-items: flex-start;
+          text-align: left;
+        }
+        h1 { font-size: 2.5rem; }
+        p.sub { max-width: 30ch; }
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .card > * { animation: none; }
-        .boxes.shake { animation: none; }
-        .box:focus { transform: none; }
-        .btn:active { transform: none; }
+        .brand, .entry { animation: none; }
+        .dots.shake { animation: none; }
+        .dot.on, .dots.ok .dot { transform: none; }
+        .key:active { transform: none; }
       }
     </style>
   </head>
   <body>
-    <div class="card">
-      <div class="logo">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-          <path stroke-linecap="round" stroke-linejoin="round" d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-      </div>
-      <div style="text-align:center;display:flex;flex-direction:column;gap:8px">
+    <main class="shell">
+      <section class="brand">
+        <div class="logo">
+          <img src="/logo.svg" alt="" width="32" height="32" />
+        </div>
         <h1>Welcome back</h1>
-        <p class="sub">Enter your 6-digit PIN to unlock Substash.</p>
-      </div>
-      <div class="boxes" id="boxes">
-        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="0" aria-label="PIN digit 1" />
-        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="1" aria-label="PIN digit 2" />
-        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="2" aria-label="PIN digit 3" />
-        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="3" aria-label="PIN digit 4" />
-        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="4" aria-label="PIN digit 5" />
-        <input class="box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-index="5" aria-label="PIN digit 6" />
-      </div>
-      <p class="error" id="error" aria-live="polite"></p>
-      <button class="btn" id="btn" type="button">Unlock</button>
-    </div>
+        <p class="sub">Enter your PIN to unlock Substash.</p>
+      </section>
+
+      <section class="entry">
+        <div class="dots" id="dots" role="status" aria-live="polite" aria-label="No digits entered">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+
+        <p class="error" id="error" role="alert"></p>
+
+        <div class="pad" id="pad">
+          <button class="key" type="button" data-digit="1" aria-label="1">1</button>
+          <button class="key" type="button" data-digit="2" aria-label="2">2</button>
+          <button class="key" type="button" data-digit="3" aria-label="3">3</button>
+          <button class="key" type="button" data-digit="4" aria-label="4">4</button>
+          <button class="key" type="button" data-digit="5" aria-label="5">5</button>
+          <button class="key" type="button" data-digit="6" aria-label="6">6</button>
+          <button class="key" type="button" data-digit="7" aria-label="7">7</button>
+          <button class="key" type="button" data-digit="8" aria-label="8">8</button>
+          <button class="key" type="button" data-digit="9" aria-label="9">9</button>
+          <span class="key spacer" aria-hidden="true"></span>
+          <button class="key" type="button" data-digit="0" aria-label="0">0</button>
+          <button class="key ghost" type="button" data-action="back" aria-label="Delete last digit">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20 5H9.5a2 2 0 0 0-1.5.7L3 12l5 6.3a2 2 0 0 0 1.5.7H20a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/>
+              <path stroke-linecap="round" d="m17 9-5 6m0-6 5 6"/>
+            </svg>
+          </button>
+        </div>
+      </section>
+    </main>
 
     <script is:inline define:vars={{ from }}>
-      const boxes = Array.from(document.querySelectorAll('.box'));
-      const boxRow = document.getElementById('boxes');
-      const btn = document.getElementById('btn');
+      const dotRow = document.getElementById('dots');
+      const dotEls = Array.from(dotRow.querySelectorAll('.dot'));
+      const pad = document.getElementById('pad');
       const err = document.getElementById('error');
 
-      boxes[0].focus();
+      let pin = '';
+      let busy = false;
 
-      function syncFilled() {
-        boxes.forEach((b) => b.classList.toggle('filled', !!b.value));
+      function render() {
+        dotEls.forEach((d, i) => d.classList.toggle('on', i < pin.length));
+        dotRow.setAttribute(
+          'aria-label',
+          pin.length === 0 ? 'No digits entered' : `${pin.length} of 6 digits entered`,
+        );
       }
 
-      boxes.forEach((box, i) => {
-        box.addEventListener('input', (e) => {
-          const val = e.target.value.replace(/[^0-9]/g, '').slice(-1);
-          e.target.value = val;
-          syncFilled();
-          if (val && i < 5) boxes[i + 1].focus();
-          if (i === 5 && val) attempt();
-        });
-        box.addEventListener('keydown', (e) => {
-          if (e.key === 'Backspace' && !e.target.value && i > 0) {
-            boxes[i - 1].focus();
-            boxes[i - 1].value = '';
-            syncFilled();
-          }
-        });
-        box.addEventListener('paste', (e) => {
-          e.preventDefault();
-          const text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '').slice(0, 6);
-          text.split('').forEach((ch, j) => { if (boxes[j]) boxes[j].value = ch; });
-          syncFilled();
-          if (text.length === 6) attempt();
-        });
+      function push(digit) {
+        if (busy || pin.length >= 6) return;
+        err.textContent = '';
+        pin += digit;
+        render();
+        if (pin.length === 6) attempt();
+      }
+
+      function pop() {
+        if (busy || !pin.length) return;
+        err.textContent = '';
+        pin = pin.slice(0, -1);
+        render();
+      }
+
+      pad.addEventListener('click', (e) => {
+        const key = e.target.closest('[data-digit], [data-action]');
+        if (!key) return;
+        if (key.dataset.action === 'back') pop();
+        else push(key.dataset.digit);
       });
 
-      btn.addEventListener('click', attempt);
+      // Physical keyboard stays first-class on desktop
+      document.addEventListener('keydown', (e) => {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        if (/^[0-9]$/.test(e.key)) { e.preventDefault(); push(e.key); }
+        else if (e.key === 'Backspace') { e.preventDefault(); pop(); }
+        else if (e.key === 'Escape') { e.preventDefault(); pin = ''; err.textContent = ''; render(); }
+      });
 
       function fail(message) {
         err.textContent = message;
-        boxRow.classList.remove('shake');
-        void boxRow.offsetWidth; // restart the animation
-        boxRow.classList.add('shake');
+        dotRow.classList.remove('shake');
+        void dotRow.offsetWidth; // restart the animation
+        dotRow.classList.add('shake');
         navigator.vibrate?.([12, 40, 12]);
+        pin = '';
+        render();
       }
 
       async function attempt() {
-        const pin = boxes.map(b => b.value).join('');
-        if (pin.length < 6) { fail('Enter all 6 digits.'); return; }
-        btn.disabled = true;
+        busy = true;
+        pad.setAttribute('data-busy', '');
         err.textContent = '';
         try {
           const res = await fetch('/api/auth/verify', {
@@ -231,19 +340,22 @@ const from = Astro.url.searchParams.get("from") ?? "/";
           });
           const data = await res.json();
           if (!res.ok) {
-            fail(data.error || 'Incorrect PIN.');
-            boxes.forEach(b => b.value = '');
-            syncFilled();
-            boxes[0].focus();
-            btn.disabled = false;
+            fail(data.error === 'Invalid PIN' ? 'Incorrect PIN. Try again.' : data.error || 'Incorrect PIN. Try again.');
+            busy = false;
+            pad.removeAttribute('data-busy');
             return;
           }
-          window.location.href = from;
+          // Confirm before leaving — an instant redirect reads as a glitch
+          dotRow.classList.add('ok');
+          setTimeout(() => { window.location.href = from; }, 380);
         } catch {
           fail('Network error. Try again.');
-          btn.disabled = false;
+          busy = false;
+          pad.removeAttribute('data-busy');
         }
       }
+
+      render();
     </script>
   </body>
 </html>

@@ -292,23 +292,18 @@ const drawerLinks = [
 <!-- ── Logout confirmation action sheet ── -->
 <div
   id="logout-modal"
-  class="fixed inset-0 z-[80] opacity-0 pointer-events-none"
-  style="transition: opacity 200ms ease"
+  class="fixed inset-0 z-[80]"
   role="dialog"
   aria-modal="true"
   aria-labelledby="logout-modal-title"
 >
+  <div id="logout-modal-backdrop" class="absolute inset-0"></div>
   <div
-    id="logout-modal-backdrop"
-    class="absolute inset-0 bg-black/60"
-  ></div>
-  <div
-    class="glass-strong absolute bottom-0 inset-x-0 lg:left-[var(--sidebar-width-desktop)] lg:right-0 lg:max-w-sm lg:mx-auto rounded-t-[var(--radius-sheet)] px-4 pt-3"
-    style="transform: translateY(100%); transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1); padding-bottom: max(env(safe-area-inset-bottom), 16px); border-bottom: 0"
+    class="glass-strong absolute bottom-0 inset-x-0 rounded-t-[var(--radius-sheet)] px-4 pt-3"
     id="logout-modal-card"
   >
-    <!-- Drag handle -->
-    <div class="flex justify-center pb-3">
+    <!-- Drag handle (touch affordance — desktop gets a centered dialog instead) -->
+    <div class="flex justify-center pb-3 lg:hidden">
       <div class="w-10 h-1 rounded-full bg-[var(--color-border)]"></div>
     </div>
 
@@ -319,16 +314,17 @@ const drawerLinks = [
       You'll need your PIN to get back in.
     </p>
 
-    <div class="flex flex-col gap-2">
+    <!-- Reversed on desktop so the destructive action lands right, per platform convention -->
+    <div class="flex flex-col gap-2 lg:flex-row-reverse">
       <button
         id="logout-confirm"
-        class="h-12 rounded-[var(--radius-control)] bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white text-sm font-semibold transition-all"
+        class="h-12 lg:flex-1 rounded-[var(--radius-control)] bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white text-sm font-semibold transition-all"
       >
         Log off
       </button>
       <button
         id="logout-cancel"
-        class="h-12 rounded-[var(--radius-control)] text-sm font-medium text-[var(--color-text)] bg-[var(--color-surface-3)] hover:bg-[var(--color-border)] active:scale-[0.98] transition-all"
+        class="h-12 lg:flex-1 rounded-[var(--radius-control)] text-sm font-medium text-[var(--color-text)] bg-[var(--color-surface-3)] hover:bg-[var(--color-border)] active:scale-[0.98] transition-all"
       >
         Cancel
       </button>
@@ -394,6 +390,95 @@ const drawerLinks = [
       animation: none;
       will-change: auto;
       transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  }
+
+  /* visibility, not opacity: an opacity-animated ancestor makes Chrome defer the
+     child's backdrop-filter, which snaps in at the end instead of ramping */
+  #logout-modal {
+    visibility: hidden;
+    pointer-events: none;
+    transition: visibility 0s linear 320ms;
+  }
+  #logout-modal[data-open] {
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+
+  /* Panic-hide: blur the library behind the confirm, not just dim it.
+     backdrop-filter is transitioned directly so it ramps with the sheet. */
+  #logout-modal-backdrop {
+    background: rgb(0 0 0 / 0);
+    -webkit-backdrop-filter: blur(0px) saturate(1);
+    backdrop-filter: blur(0px) saturate(1);
+    transition:
+      background-color 260ms var(--ease-out-quart),
+      -webkit-backdrop-filter 260ms var(--ease-out-quart),
+      backdrop-filter 260ms var(--ease-out-quart);
+  }
+  #logout-modal[data-open] #logout-modal-backdrop {
+    background: rgb(0 0 0 / 0.55);
+    -webkit-backdrop-filter: blur(12px) saturate(0.85);
+    backdrop-filter: blur(12px) saturate(0.85);
+  }
+  @supports not (
+    (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+  ) {
+    #logout-modal[data-open] #logout-modal-backdrop {
+      background: rgb(0 0 0 / 0.9);
+    }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    #logout-modal-backdrop,
+    #logout-modal[data-open] #logout-modal-backdrop {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    #logout-modal[data-open] #logout-modal-backdrop {
+      background: rgb(0 0 0 / 0.92);
+    }
+  }
+
+  /* Logout confirm: bottom sheet on touch, driven by data-open so CSS owns both forms */
+  #logout-modal-card {
+    transform: translateY(100%);
+    transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+    padding-bottom: max(env(safe-area-inset-bottom), 16px);
+    border-bottom: 0;
+  }
+  #logout-modal[data-open] #logout-modal-card {
+    transform: translateY(0);
+  }
+
+  /* Desktop: centered dialog — the trigger sits in the sidebar, not at the bottom edge */
+  @media (min-width: 1024px) {
+    #logout-modal-card {
+      top: 50%;
+      bottom: auto;
+      left: var(--sidebar-width-desktop);
+      right: 0;
+      max-width: 380px;
+      margin-inline: auto;
+      padding: 24px 24px 24px;
+      border-radius: var(--radius-sheet);
+      border-bottom: 1px solid var(--glass-border);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      transform: translateY(-46%) scale(0.97);
+      opacity: 0;
+      transition:
+        transform 250ms var(--ease-out-quart),
+        opacity 250ms var(--ease-out-quart);
+    }
+    #logout-modal[data-open] #logout-modal-card {
+      transform: translateY(-50%) scale(1);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #logout-modal-card {
+      transition: none;
     }
   }
 
@@ -528,11 +613,9 @@ const drawerLinks = [
 
   function openLogoutModal() {
     const modal = document.getElementById('logout-modal');
-    const card = document.getElementById('logout-modal-card');
-    if (!modal || !card) return;
+    if (!modal) return;
     _prevFocus = document.activeElement as HTMLElement;
-    modal.classList.remove('opacity-0', 'pointer-events-none');
-    card.style.transform = 'translateY(0)';
+    modal.setAttribute('data-open', '');
     // Move focus to Cancel (safer default for destructive action)
     setTimeout(() => (document.getElementById('logout-cancel') as HTMLElement)?.focus(), 50);
     document.addEventListener('keydown', handleModalKeydown);
@@ -540,10 +623,8 @@ const drawerLinks = [
 
   function closeLogoutModal() {
     const modal = document.getElementById('logout-modal');
-    const card = document.getElementById('logout-modal-card');
-    if (!modal || !card) return;
-    modal.classList.add('opacity-0', 'pointer-events-none');
-    card.style.transform = 'translateY(100%)';
+    if (!modal) return;
+    modal.removeAttribute('data-open');
     document.removeEventListener('keydown', handleModalKeydown);
     _prevFocus?.focus();
     _prevFocus = null;
