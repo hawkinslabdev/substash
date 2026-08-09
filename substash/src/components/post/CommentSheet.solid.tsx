@@ -41,8 +41,52 @@ export default function CommentSheet(props: Props) {
   let touchStartY = 0;
   let touchStartT = 0;
   let sheet: HTMLDivElement | undefined;
+  let dialog: HTMLDivElement | undefined;
   let prevFocus: HTMLElement | null = null;
   let counted = false;
+
+  const isMobile = () =>
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 1023px)").matches;
+
+  /** Track the real visible area so the sheet stays put when the on-screen
+   *  keyboard opens — iOS/Android don't shrink `dvh`/fixed positioning for
+   *  the keyboard, so without this the sheet (and its Post button) can drift
+   *  out from under the finger, letting taps fall through to whatever is
+   *  behind it. */
+  function syncViewport() {
+    const vv = window.visualViewport;
+    if (!vv || !dialog || !isMobile()) return;
+    dialog.style.height = `${vv.height}px`;
+    dialog.style.width = `${vv.width}px`;
+    dialog.style.left = `${vv.offsetLeft}px`;
+    dialog.style.top = `${vv.offsetTop}px`;
+  }
+
+  function clearViewportOverride() {
+    if (!dialog) return;
+    dialog.style.removeProperty("height");
+    dialog.style.removeProperty("width");
+    dialog.style.removeProperty("left");
+    dialog.style.removeProperty("top");
+  }
+
+  /** Focus the top-level comment field (not a reply box) once it mounts —
+   *  RichTextEditor is lazy-loaded behind Suspense, so it isn't in the DOM
+   *  the instant the sheet opens. Falls back to the sheet container so
+   *  keyboard/focus-trap behavior still works if the editor never appears. */
+  function focusEditor(deadline = performance.now() + 2000) {
+    const editable = sheet?.querySelector<HTMLElement>("[contenteditable]");
+    if (editable) {
+      editable.focus();
+      return;
+    }
+    if (performance.now() < deadline) {
+      requestAnimationFrame(() => focusEditor(deadline));
+    } else {
+      sheet?.focus();
+    }
+  }
 
   createEffect(() => {
     if (props.open) {
@@ -55,9 +99,12 @@ export default function CommentSheet(props: Props) {
       // Mount first, then slide in on the next frame
       requestAnimationFrame(() => {
         setShown(true);
-        sheet?.focus();
+        focusEditor();
       });
       document.addEventListener("keydown", onKeydown);
+      syncViewport();
+      window.visualViewport?.addEventListener("resize", syncViewport);
+      window.visualViewport?.addEventListener("scroll", syncViewport);
     } else {
       release();
       setShown(false);
@@ -70,10 +117,13 @@ export default function CommentSheet(props: Props) {
     release();
   });
 
-  /** Undo what open took over: scroll lock, keys, focus, counter */
+  /** Undo what open took over: scroll lock, keys, focus, counter, viewport tracking */
   function release() {
     document.body.style.overflow = "";
     document.removeEventListener("keydown", onKeydown);
+    window.visualViewport?.removeEventListener("resize", syncViewport);
+    window.visualViewport?.removeEventListener("scroll", syncViewport);
+    clearViewportOverride();
     if (counted) {
       counted = false;
       setOpenCount((n) => Math.max(0, n - 1));
@@ -135,8 +185,11 @@ export default function CommentSheet(props: Props) {
   return (
     <Show when={props.open}>
       <Portal>
-        {/* Desktop: live inside the content column so the sheet lines up with its media */}
+        {/* Desktop: live inside the content column so the sheet lines up with its media.
+            Mobile position/size is kept in sync with the real visual viewport via JS
+            (see syncViewport) so the keyboard can't push content out from under a tap. */}
         <div
+          ref={dialog}
           class="fixed inset-0 z-[90] lg:left-[var(--sidebar-width-desktop)] lg:top-[var(--header-height)]"
           role="dialog"
           aria-modal="true"

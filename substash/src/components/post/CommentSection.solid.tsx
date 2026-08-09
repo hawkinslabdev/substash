@@ -29,10 +29,17 @@ function CommentSkeleton() {
 
 export default function CommentSection(props: Props) {
   const [refetchKey, setRefetchKey] = createSignal(0);
+  const [highlightId, setHighlightId] = createSignal<string | null>(null);
   const [comments] = createResource(
     () => [props.stashId, refetchKey()] as const,
     ([id]) => fetchComments(id),
   );
+
+  function handlePosted(id: string) {
+    setHighlightId(id);
+    setRefetchKey((k) => k + 1);
+    setTimeout(() => setHighlightId((cur) => (cur === id ? null : cur)), 2000);
+  }
 
   return (
     <section class="px-4 pb-6 space-y-3">
@@ -70,6 +77,8 @@ export default function CommentSection(props: Props) {
             title={props.title}
             thumbnailUrl={props.thumbnailUrl}
             onRefetch={() => setRefetchKey((k) => k + 1)}
+            onPosted={handlePosted}
+            highlightId={highlightId()}
           />
         </Show>
       </Show>
@@ -78,7 +87,7 @@ export default function CommentSection(props: Props) {
         mediaType={props.mediaType}
         title={props.title}
         thumbnailUrl={props.thumbnailUrl}
-        onPosted={() => setRefetchKey((k) => k + 1)}
+        onPosted={handlePosted}
       />
     </section>
   );

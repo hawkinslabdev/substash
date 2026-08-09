@@ -1,6 +1,7 @@
 import RichTextEditor from "@/components/ui/RichTextEditor.solid";
 import { createSignal } from "solid-js";
 import { showToast } from "@/lib/utils/toast";
+import type { Comment } from "@/lib/db/schema";
 
 interface Props {
   stashId: string;
@@ -8,7 +9,7 @@ interface Props {
   parentId?: string;
   title?: string;
   thumbnailUrl?: string;
-  onPosted?: () => void;
+  onPosted?: (id: string) => void;
   placeholder?: string;
 }
 
@@ -19,7 +20,7 @@ export default function CommentForm(props: Props) {
     if (pending()) return;
     setPending(true);
     try {
-      await fetch("/api/comments", {
+      const res = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -33,8 +34,9 @@ export default function CommentForm(props: Props) {
               : undefined,
         }),
       });
+      const posted: Comment | null = res.ok ? await res.json() : null;
       showToast(props.parentId ? "Reply posted" : "Comment posted");
-      props.onPosted?.();
+      if (posted) props.onPosted?.(posted.id);
     } finally {
       setPending(false);
     }

@@ -434,6 +434,23 @@
   animation: heart-burst 800ms var(--ease-out-quart) forwards;
 }
 
+/* Newly-posted comment flash */
+@keyframes comment-highlight {
+  from {
+    background-color: color-mix(
+      in srgb,
+      var(--color-accent) 35%,
+      var(--color-surface-3)
+    );
+  }
+  to {
+    background-color: var(--color-surface-3);
+  }
+}
+.comment-highlight {
+  animation: comment-highlight 2s ease-out;
+}
+
 /* Feed item entrance on pagination */
 @keyframes feed-enter {
   from {
@@ -613,6 +630,9 @@
     /* Static heart flash instead of the pop */
     animation: none;
     opacity: 1;
+  }
+  .comment-highlight {
+    animation: none;
   }
   .feed-item:hover {
     transform: none;

@@ -1,2 +1,16 @@
-cd substash
-npm run format
+cd substash || exit 1
+
+if command -v npm >/dev/null 2>&1; then
+  npm run format
+elif command -v flatpak-spawn >/dev/null 2>&1; then
+  flatpak-spawn --host npm run format
+else
+  NPM_CLI=$(ls -d /run/host/usr/lib/node_modules_*/npm/bin/npm-cli.js 2>/dev/null | sort -V | tail -n 1)
+  if [ -n "$NPM_CLI" ]; then
+    LD_LIBRARY_PATH="/run/host/usr/lib64:/run/host/usr/lib" \
+      /run/host/usr/bin/node "$NPM_CLI" run format
+  else
+    echo "Error: could not locate npm on host." >&2
+    exit 1
+  fi
+fi

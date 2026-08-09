@@ -19,8 +19,10 @@ interface Props {
   title?: string;
   thumbnailUrl?: string;
   onRefetch?: () => void;
+  onPosted?: (id: string) => void;
   parentId?: string | null;
   depth?: number;
+  highlightId?: string | null;
 }
 
 export default function CommentThread(props: Props) {
@@ -63,7 +65,12 @@ export default function CommentThread(props: Props) {
 
           return (
             <li class="space-y-1">
-              <div class="rounded-lg bg-[var(--color-surface-3)] p-3 text-sm">
+              <div
+                class="rounded-lg bg-[var(--color-surface-3)] p-3 text-sm"
+                classList={{
+                  "comment-highlight": comment.id === props.highlightId,
+                }}
+              >
                 <div
                   class="md-body text-[var(--color-text)] leading-relaxed"
                   innerHTML={renderBody(comment.body)}
@@ -127,9 +134,9 @@ export default function CommentThread(props: Props) {
                     title={props.title}
                     thumbnailUrl={props.thumbnailUrl}
                     placeholder="Write a reply…"
-                    onPosted={() => {
+                    onPosted={(id) => {
                       setReplyingTo(null);
-                      props.onRefetch?.();
+                      props.onPosted?.(id);
                     }}
                   />
                 </div>
@@ -145,8 +152,10 @@ export default function CommentThread(props: Props) {
                   title={props.title}
                   thumbnailUrl={props.thumbnailUrl}
                   onRefetch={props.onRefetch}
+                  onPosted={props.onPosted}
                   parentId={comment.id}
                   depth={(props.depth ?? 0) + 1}
+                  highlightId={props.highlightId}
                 />
               </Show>
             </li>
