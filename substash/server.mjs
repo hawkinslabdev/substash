@@ -67,6 +67,14 @@ const compress = compression();
 const server = createServer(async (req, res) => {
   // Serve dist/client/ assets first; SSR handler picks up everything else
   if (await tryStatic(req, res)) return;
+
+  // Never SSR; a deleted chunk would return Astro's HTML 404 and fail the module MIME check
+  if (req.url?.startsWith("/_astro/")) {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end("Not Found");
+    return;
+  }
+
   compress(req, res, () => handler(req, res));
 });
 

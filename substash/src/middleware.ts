@@ -1,4 +1,4 @@
-import { defineMiddleware } from "astro:middleware";
+import { defineMiddleware, sequence } from "astro:middleware";
 import { db } from "@/lib/db";
 import { settings, shareLinks } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -52,7 +52,16 @@ async function isValidShareKey(shareKey: string): Promise<boolean> {
   return timingSafeEqual(expected, row.hmac);
 }
 
-export const onRequest = defineMiddleware(
+// Cached HTML requests deleted asset hashes, and replays authed pages on BACK after logout
+const noStoreHtml = defineMiddleware(async (_ctx, next) => {
+  const res = await next();
+  if (res.headers.get("content-type")?.includes("text/html")) {
+    res.headers.set("Cache-Control", "no-store, must-revalidate");
+  }
+  return res;
+});
+
+const authGate = defineMiddleware(
   async ({ request, cookies, redirect }, next) => {
     // undefined → enforce auth without Secure flag (same as false).
     // false → auth via cookie without Secure flag (reverse-proxy HTTPS).
@@ -96,15 +105,8 @@ export const onRequest = defineMiddleware(
       return redirect(`/auth?from=${encodeURIComponent(pathname)}`);
     }
 
-    const res = await next();
-
-    // Authenticated pages must never be restored from the back/forward cache.
-    // Without this, pressing BACK after logging off replays the rendered page
-    // straight from the browser cache and middleware never re-checks the cookie.
-    if (res.headers.get("content-type")?.includes("text/html")) {
-      res.headers.set("Cache-Control", "no-store, must-revalidate");
-    }
-
-    return res;
+    return next();
   },
 );
+
+export const onRequest = sequence(noStoreHtml, authGate);

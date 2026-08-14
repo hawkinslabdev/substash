@@ -86,8 +86,7 @@ function ImmersiveItem(props: {
   let wrapper: HTMLDivElement | undefined;
   const item = () => props.item;
   const isScene = () => item().type === "scene";
-  // Stash-side URL. Persisted as-is in like/comment metadata, the proxy
-  // wrapper is a render concern and must not end up in the database.
+  // Persisted in like/comment metadata; the proxy wrapper must not reach the database
   const rawPoster = () => {
     const it = item();
     return (

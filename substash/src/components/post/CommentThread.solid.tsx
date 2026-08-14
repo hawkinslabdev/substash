@@ -1,15 +1,12 @@
 import { createSignal, For, Show } from "solid-js";
 import CommentForm from "./CommentForm.solid";
-import { renderMarkdown, timeAgo } from "@/lib/utils/markdown";
+import { renderMarkdown, isHtmlBody, timeAgo } from "@/lib/utils/markdown";
 import { sanitize } from "@/lib/utils/sanitize";
 import { showToast } from "@/lib/utils/toast";
 import type { Comment } from "@/lib/db/schema";
 
 function renderBody(body: string): string {
-  // WYSIWYG editor stores HTML (starts with a block tag); old comments are plain text / markdown
-  return body.trimStart().startsWith("<")
-    ? sanitize(body)
-    : renderMarkdown(body);
+  return isHtmlBody(body) ? sanitize(body) : renderMarkdown(body);
 }
 
 interface Props {
@@ -32,8 +29,7 @@ export default function CommentThread(props: Props) {
   );
 
   async function handleDelete(id: string) {
-    // Content-Type required, a bodyless mutating request trips Astro's
-    // same-origin check behind a TLS-terminating proxy. See performLogout.
+    // Content-Type required: bodyless mutations trip Astro's origin check
     const res = await fetch(`/api/comments/${id}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },

@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { comments, type Comment } from "@/lib/db/schema";
 import { desc } from "drizzle-orm";
 import { proxyImage } from "@/lib/stash/image";
-import { timeAgo, renderMarkdown } from "@/lib/utils/markdown";
+import { timeAgo, renderMarkdown, isHtmlBody } from "@/lib/utils/markdown";
 
 function stillThumb(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -15,10 +15,9 @@ function stillThumb(url: string | null | undefined): string | null {
 
 const rows: Comment[] = db.select().from(comments).orderBy(desc(comments.createdAt)).limit(50).all();
 
-// sanitize() needs a DOM and returns "" under SSR — pointless here anyway,
-// since excerpt() strips every tag and Astro escapes the result as text.
+// sanitize() needs a DOM and returns "" under SSR; excerpt() strips tags anyway
 function renderBody(body: string): string {
-  return body.trimStart().startsWith("<") ? body : renderMarkdown(body);
+  return isHtmlBody(body) ? body : renderMarkdown(body);
 }
 
 const ENTITIES: Record<string, string> = {
@@ -28,8 +27,7 @@ const ENTITIES: Record<string, string> = {
 function excerpt(html: string, max = 120): string {
   const text = html
     .replace(/<[^>]+>/g, " ")
-    // Decode in one pass, otherwise `&amp;lt;` would resolve to a literal `<`.
-    // Without this the escaped source leaks through as text: `&` renders `&amp;`.
+    // one pass, or `&amp;lt;` would decode twice into `<`
     .replace(/&(amp|lt|gt|quot|apos|#39|nbsp);/g, (m, e) => ENTITIES[e] ?? m)
     .replace(/\s+/g, " ")
     .trim();

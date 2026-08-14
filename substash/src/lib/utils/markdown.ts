@@ -6,6 +6,11 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+// Editor bodies start with a tag only if a block element was typed first; testing that alone double-escapes the rest
+export function isHtmlBody(body: string): boolean {
+  return /<\/?[a-z][^>]*>/i.test(body) || /&(?:[a-z]+|#\d+);/i.test(body);
+}
+
 export function renderMarkdown(raw: string): string {
   // Escape HTML first so no injected tags survive
   let s = escapeHtml(raw.trim());

@@ -661,22 +661,16 @@ const drawerLinks = [
     }
     let cleared = false;
     try {
-      // Content-Type is load-bearing: Astro's origin check only exempts requests
-      // that carry one (those are CORS-preflighted, so they can't be forged
-      // cross-site). A bodyless POST is held to an exact origin match, which
-      // fails behind a TLS-terminating proxy — the browser sends
-      // `Origin: https://host` while Astro sees `http://host` — and the whole
-      // logout 403s.
+      // Content-Type required: bodyless POSTs need an exact origin match, which 403s behind a TLS proxy
       const res = await fetch('/api/auth/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
       cleared = res.ok;
-    } catch { /* network down — treated as failure below */ }
+    } catch { /* treated as failure below */ }
 
     if (!cleared) {
-      // The session cookie is still live. Navigating to /auth anyway would look
-      // logged out while BACK quietly restores the session — report it instead.
+      // Cookie still live; navigating away would look logged out while BACK restores it
       if (confirmBtn) {
         confirmBtn.disabled = false;
         confirmBtn.textContent = 'Log off failed — retry';
