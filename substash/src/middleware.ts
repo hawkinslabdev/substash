@@ -96,6 +96,15 @@ export const onRequest = defineMiddleware(
       return redirect(`/auth?from=${encodeURIComponent(pathname)}`);
     }
 
-    return next();
+    const res = await next();
+
+    // Authenticated pages must never be restored from the back/forward cache.
+    // Without this, pressing BACK after logging off replays the rendered page
+    // straight from the browser cache and middleware never re-checks the cookie.
+    if (res.headers.get("content-type")?.includes("text/html")) {
+      res.headers.set("Cache-Control", "no-store, must-revalidate");
+    }
+
+    return res;
   },
 );

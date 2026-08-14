@@ -86,11 +86,15 @@ function ImmersiveItem(props: {
   let wrapper: HTMLDivElement | undefined;
   const item = () => props.item;
   const isScene = () => item().type === "scene";
-  const poster = () => {
+  // Stash-side URL. Persisted as-is in like/comment metadata — the proxy
+  // wrapper is a render concern and must not end up in the database.
+  const rawPoster = () => {
     const it = item();
-    const raw = it.type === "scene" ? it.paths.screenshot : it.paths.thumbnail;
-    return raw ? proxyImage(raw) : null;
+    return (
+      (it.type === "scene" ? it.paths.screenshot : it.paths.thumbnail) ?? null
+    );
   };
+  const poster = () => proxyImage(rawPoster());
   const videoSrc = () => {
     const it = item();
     if (it.type === "scene") return it.paths.stream;
@@ -105,7 +109,7 @@ function ImmersiveItem(props: {
     mediaType: props.item.type,
     initialCount: props.item.o_counter ?? 0,
     title: props.item.title ?? undefined,
-    thumbnailUrl: poster() ?? undefined,
+    thumbnailUrl: rawPoster() ?? undefined,
   });
   const [heart, setHeart] = createSignal(false);
   let tapTimer: number | undefined;
@@ -195,7 +199,7 @@ function ImmersiveItem(props: {
         initialLikes={item().o_counter ?? 0}
         commentCount={item().commentCount}
         title={item().title}
-        thumbnailUrl={poster() ?? undefined}
+        thumbnailUrl={rawPoster() ?? undefined}
         bottomOffset={OVERLAY_BOTTOM}
         persistent
       />

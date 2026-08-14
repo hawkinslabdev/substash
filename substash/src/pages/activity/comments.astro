@@ -12,16 +12,27 @@ function stillThumb(url: string | null | undefined): string | null {
   if (url.includes("/preview") || /\.(mp4|webm|mov)(\?|$)/i.test(url)) return null;
   return url;
 }
-import { sanitize } from "@/lib/utils/sanitize";
 
 const rows: Comment[] = db.select().from(comments).orderBy(desc(comments.createdAt)).limit(50).all();
 
+// sanitize() needs a DOM and returns "" under SSR — pointless here anyway,
+// since excerpt() strips every tag and Astro escapes the result as text.
 function renderBody(body: string): string {
-  return body.trimStart().startsWith("<") ? sanitize(body) : renderMarkdown(body);
+  return body.trimStart().startsWith("<") ? body : renderMarkdown(body);
 }
 
+const ENTITIES: Record<string, string> = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", "#39": "'", nbsp: " ",
+};
+
 function excerpt(html: string, max = 120): string {
-  const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const text = html
+    .replace(/<[^>]+>/g, " ")
+    // Decode in one pass, otherwise `&amp;lt;` would resolve to a literal `<`.
+    // Without this the escaped source leaks through as text: `&` renders `&amp;`.
+    .replace(/&(amp|lt|gt|quot|apos|#39|nbsp);/g, (m, e) => ENTITIES[e] ?? m)
+    .replace(/\s+/g, " ")
+    .trim();
   return text.length > max ? text.slice(0, max).trimEnd() + "…" : text;
 }
 ---
