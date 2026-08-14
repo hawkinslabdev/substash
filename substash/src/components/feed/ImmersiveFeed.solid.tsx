@@ -86,7 +86,7 @@ function ImmersiveItem(props: {
   let wrapper: HTMLDivElement | undefined;
   const item = () => props.item;
   const isScene = () => item().type === "scene";
-  // Stash-side URL. Persisted as-is in like/comment metadata — the proxy
+  // Stash-side URL. Persisted as-is in like/comment metadata, the proxy
   // wrapper is a render concern and must not end up in the database.
   const rawPoster = () => {
     const it = item();
@@ -249,7 +249,7 @@ function ImmersiveInner(props: Props) {
   const [refreshKey, setRefreshKey] = createSignal(0);
   let touchStartY = 0;
 
-  // Read before any effect runs — the index effect below would overwrite it
+  // Read before any effect runs, the index effect below would overwrite it
   const cached = loadCache(props.sort);
   const savedIndex = cached ? loadIndex(props.sort) : 0;
 

@@ -337,7 +337,11 @@ export default function Settings(props: Props) {
   }
 
   async function removePin() {
-    await fetch("/api/settings/pin", { method: "DELETE" });
+    // Content-Type required, see performLogout in BottomNav.astro.
+    await fetch("/api/settings/pin", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
     setPinEnabled(false);
     setShowPinForm(false);
     showToast("PIN removed.");

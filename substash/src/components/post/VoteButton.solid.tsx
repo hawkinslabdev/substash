@@ -20,7 +20,7 @@ interface Props {
 
 export default function VoteButton(props: Props) {
   // Shared per-media store: keeps this button in sync with the in-media
-  // action rail. No persistent vote memory — each page visit gets a fresh like.
+  // action rail. No persistent vote memory, each page visit gets a fresh like.
   const store = useVote({
     id: (props.sceneId ?? props.imageId)!,
     mediaType: props.imageId ? "image" : "scene",

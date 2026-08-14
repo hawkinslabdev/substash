@@ -7,7 +7,7 @@ interface Props {
   class?: string;
   id?: string;
   onPlay?: () => void;
-  /** Mute button corner — immersive mode uses top-right to clear the title overlay */
+  /** Mute button corner, immersive mode uses top-right to clear the title overlay */
   mutePos?: "bottom-left" | "top-right";
   /** Buffer metadata immediately (immersive neighbors), instead of on intersect */
   warm?: boolean;
@@ -17,7 +17,7 @@ export default function VideoPlayer(props: Props) {
   let videoEl: HTMLVideoElement | undefined;
   const [muted, setMuted] = createSignal(true);
   const [playing, setPlaying] = createSignal(false);
-  // First real frame rendered — poster overlay can go
+  // First real frame rendered, poster overlay can go
   const [started, setStarted] = createSignal(false);
   const [preload, setPreload] = createSignal<"none" | "metadata">(
     props.warm ? "metadata" : "none",
@@ -89,7 +89,7 @@ export default function VideoPlayer(props: Props) {
         class="w-full h-full object-contain"
       />
       {/* Poster overlay: iOS Safari drops the native poster and shows a black
-          player as soon as metadata loads — keep the thumbnail visible until
+          player as soon as metadata loads, keep the thumbnail visible until
           the first real frame plays. */}
       <Show when={props.poster && !started()}>
         <img

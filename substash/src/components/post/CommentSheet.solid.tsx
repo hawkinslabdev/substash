@@ -30,7 +30,7 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), textarea, select, [contenteditable], [tabindex]:not([tabindex="-1"])';
 
 /**
- * Bottom sheet wrapping CommentSection — lets the user read and write
+ * Bottom sheet wrapping CommentSection, lets the user read and write
  * comments while the media keeps playing behind it. Drag down or tap the
  * backdrop to dismiss.
  */
@@ -50,7 +50,7 @@ export default function CommentSheet(props: Props) {
     window.matchMedia("(max-width: 1023px)").matches;
 
   /** Track the real visible area so the sheet stays put when the on-screen
-   *  keyboard opens — iOS/Android don't shrink `dvh`/fixed positioning for
+   *  keyboard opens, iOS/Android don't shrink `dvh`/fixed positioning for
    *  the keyboard, so without this the sheet (and its Post button) can drift
    *  out from under the finger, letting taps fall through to whatever is
    *  behind it. */

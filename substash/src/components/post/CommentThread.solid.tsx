@@ -32,7 +32,12 @@ export default function CommentThread(props: Props) {
   );
 
   async function handleDelete(id: string) {
-    const res = await fetch(`/api/comments/${id}`, { method: "DELETE" });
+    // Content-Type required, a bodyless mutating request trips Astro's
+    // same-origin check behind a TLS-terminating proxy. See performLogout.
+    const res = await fetch(`/api/comments/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
     if (res.ok) {
       showToast("Comment deleted");
       props.onRefetch?.();

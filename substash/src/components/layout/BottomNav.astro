@@ -659,9 +659,31 @@ const drawerLinks = [
       confirmBtn.disabled = true;
       confirmBtn.textContent = 'Logging off…';
     }
+    let cleared = false;
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch { /* best-effort */ }
+      // Content-Type is load-bearing: Astro's origin check only exempts requests
+      // that carry one (those are CORS-preflighted, so they can't be forged
+      // cross-site). A bodyless POST is held to an exact origin match, which
+      // fails behind a TLS-terminating proxy — the browser sends
+      // `Origin: https://host` while Astro sees `http://host` — and the whole
+      // logout 403s.
+      const res = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      cleared = res.ok;
+    } catch { /* network down — treated as failure below */ }
+
+    if (!cleared) {
+      // The session cookie is still live. Navigating to /auth anyway would look
+      // logged out while BACK quietly restores the session — report it instead.
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Log off failed — retry';
+      }
+      return;
+    }
+
     localStorage.removeItem('substash:session');
     sessionStorage.clear();
     window.location.href = '/auth';

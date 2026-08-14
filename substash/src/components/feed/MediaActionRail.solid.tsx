@@ -91,7 +91,7 @@ export default function MediaActionRail(props: Props) {
 
   return (
     <>
-      {/* Contrast scrim — functional: guarantees icon legibility over bright media */}
+      {/* Contrast scrim, functional: guarantees icon legibility over bright media */}
       <div
         class="absolute inset-x-0 bottom-0 h-1/3 pointer-events-none z-10 transition-opacity duration-300"
         classList={{ "opacity-0": !active() || dimmed() }}
@@ -112,7 +112,7 @@ export default function MediaActionRail(props: Props) {
         }}
         style={{ bottom: props.bottomOffset ?? "12px" }}
       >
-        {/* Like — icon + count share one hit area so tapping the number also registers */}
+        {/* Like, icon + count share one hit area so tapping the number also registers */}
         <button
           onClick={handleLike}
           aria-label="Like"
@@ -138,7 +138,7 @@ export default function MediaActionRail(props: Props) {
           <span class={countLabel}>{formatCount(vote.count())}</span>
         </button>
 
-        {/* Comments — icon + count share one hit area so tapping the number also registers */}
+        {/* Comments, icon + count share one hit area so tapping the number also registers */}
         <button
           onClick={() => setSheetOpen(true)}
           aria-label="Comments"
