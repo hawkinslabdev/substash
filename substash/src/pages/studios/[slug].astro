@@ -96,7 +96,16 @@ const cursorPayload = { page: 1, perPage: 20, total: count, sort, studioId: slug
       </svg>
     </a>
     <h1 class="text-base font-semibold truncate">{displayName}</h1>
-    <span class="ml-auto text-xs text-[var(--color-text-muted)] shrink-0">{count}</span>
+    <a
+      href={`/discover?studio=${slug}`}
+      aria-label="Play as feed"
+      class="ml-auto text-[var(--color-text-muted)] hover:text-[var(--color-text)] shrink-0"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon stroke-linecap="round" stroke-linejoin="round" points="5 3 19 12 5 21 5 3" />
+      </svg>
+    </a>
+    <span class="text-xs text-[var(--color-text-muted)] shrink-0">{count}</span>
   </header>
 
   <SortBar sort={sort} baseUrl={`/studios/${slug}`} />

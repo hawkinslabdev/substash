@@ -22,6 +22,9 @@ import type { FeedItem } from "@/lib/stash/feed-item";
 
 interface Props {
   sort?: string;
+  tagId?: string;
+  studioId?: string;
+  performerId?: string;
   initialData?: PageResult;
 }
 
@@ -42,18 +45,21 @@ interface ImmersiveCache {
   savedAt: number;
 }
 
-const cacheKey = (sort?: string) => `substash:immersive:${sort ?? "random"}`;
-const indexKey = (sort?: string) =>
-  `substash:immersive-index:${sort ?? "random"}`;
+const filterKey = (props: Pick<Props, "tagId" | "studioId" | "performerId">) =>
+  `${props.tagId ?? ""}:${props.studioId ?? ""}:${props.performerId ?? ""}`;
+const cacheKey = (sort?: string, filters = "") =>
+  `substash:immersive:${sort ?? "random"}:${filters}`;
+const indexKey = (sort?: string, filters = "") =>
+  `substash:immersive-index:${sort ?? "random"}:${filters}`;
 
 // /api/stash/feed ignores the cursor seed, so caching pages is the only way to keep place
-function loadCache(sort?: string): ImmersiveCache | null {
+function loadCache(sort?: string, filters = ""): ImmersiveCache | null {
   try {
-    const raw = sessionStorage.getItem(cacheKey(sort));
+    const raw = sessionStorage.getItem(cacheKey(sort, filters));
     if (!raw) return null;
     const data: ImmersiveCache = JSON.parse(raw);
     if (Date.now() - data.savedAt > CACHE_TTL) {
-      sessionStorage.removeItem(cacheKey(sort));
+      sessionStorage.removeItem(cacheKey(sort, filters));
       return null;
     }
     return data.pages?.length ? data : null;
@@ -62,9 +68,9 @@ function loadCache(sort?: string): ImmersiveCache | null {
   }
 }
 
-function loadIndex(sort?: string): number {
+function loadIndex(sort?: string, filters = ""): number {
   try {
-    const n = Number(sessionStorage.getItem(indexKey(sort)));
+    const n = Number(sessionStorage.getItem(indexKey(sort, filters)));
     return Number.isInteger(n) && n > 0 ? n : 0;
   } catch {
     return 0;
@@ -248,14 +254,21 @@ function ImmersiveInner(props: Props) {
   const [refreshKey, setRefreshKey] = createSignal(0);
   let touchStartY = 0;
 
+  const fkey = filterKey(props);
+
   // Read before any effect runs, the index effect below would overwrite it
-  const cached = loadCache(props.sort);
-  const savedIndex = cached ? loadIndex(props.sort) : 0;
+  const cached = loadCache(props.sort, fkey);
+  const savedIndex = cached ? loadIndex(props.sort, fkey) : 0;
 
   const query = createInfiniteQuery(() => ({
-    queryKey: ["immersive-feed", props.sort, refreshKey()],
+    queryKey: ["immersive-feed", props.sort, fkey, refreshKey()],
     queryFn: ({ pageParam }) =>
-      fetchPage(pageParam as string | null, { sort: props.sort }),
+      fetchPage(pageParam as string | null, {
+        sort: props.sort,
+        tagId: props.tagId,
+        studioId: props.studioId,
+        performerId: props.performerId,
+      }),
     initialPageParam: null as string | null,
     getNextPageParam: (last: PageResult) => last.nextCursor ?? undefined,
     // Cached pages beat SSR initialData: they carry every page the user scrolled
@@ -312,7 +325,7 @@ function ImmersiveInner(props: Props) {
     if (!data || data.pages.length === 0) return;
     try {
       sessionStorage.setItem(
-        cacheKey(props.sort),
+        cacheKey(props.sort, fkey),
         JSON.stringify({
           pages: data.pages,
           pageParams: data.pageParams as (string | null)[],
@@ -326,7 +339,7 @@ function ImmersiveInner(props: Props) {
 
   createEffect(() => {
     try {
-      sessionStorage.setItem(indexKey(props.sort), String(active()));
+      sessionStorage.setItem(indexKey(props.sort, fkey), String(active()));
     } catch {
       /* storage quota */
     }
@@ -340,7 +353,7 @@ function ImmersiveInner(props: Props) {
         setActive(0);
         container?.scrollTo({ top: 0, behavior: "instant" });
         try {
-          sessionStorage.removeItem(cacheKey(props.sort));
+          sessionStorage.removeItem(cacheKey(props.sort, fkey));
         } catch {
           /* storage unavailable */
         }

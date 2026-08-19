@@ -11,7 +11,7 @@ import { attachCommentCounts } from "@/lib/db/comment-counts";
 import type { FindScenesQuery, FindImagesQuery } from "@/lib/stash/types";
 import { filterByTags } from "@/lib/stash/filter";
 import { DEMO_MODE } from "astro:env/server";
-import { demoFirstPage } from "@/lib/demo";
+import { demoFirstPage, demoItemsFiltered } from "@/lib/demo";
 
 const ALLOWED_SORTS = ["random", "date", "rating"] as const;
 type Sort = (typeof ALLOWED_SORTS)[number];
@@ -20,6 +20,10 @@ const rawSort = Astro.url.searchParams.get("sort") ?? "random";
 const sort: Sort = (ALLOWED_SORTS as readonly string[]).includes(rawSort)
   ? (rawSort as Sort)
   : "random";
+
+const tagId = Astro.url.searchParams.get("tag") ?? undefined;
+const studioId = Astro.url.searchParams.get("studio") ?? undefined;
+const performerId = Astro.url.searchParams.get("performer") ?? undefined;
 
 const TYPES_PER_PAGE = 10;
 
@@ -32,13 +36,31 @@ let items: import("@/lib/stash/feed-item").FeedItem[] = [];
 let count = 0;
 let offline = false;
 
+const hasFilter = !!(tagId || studioId || performerId);
+
 let demoSeed: number | undefined;
 if (DEMO_MODE) {
-  const demo = demoFirstPage(sort);
-  items = demo.items;
-  count = demo.count;
-  demoSeed = demo.seed;
+  if (hasFilter) {
+    const demo = demoItemsFiltered({ tagId, studioId, performerId, sort });
+    items = demo.items;
+    count = demo.count;
+  } else {
+    const demo = demoFirstPage(sort);
+    items = demo.items;
+    count = demo.count;
+    demoSeed = demo.seed;
+  }
 } else try {
+  const sceneFilter: Record<string, unknown> = {};
+  if (tagId) sceneFilter.tags = { value: [tagId], modifier: "INCLUDES" };
+  if (studioId) sceneFilter.studios = { value: [studioId], modifier: "INCLUDES" };
+  if (performerId) sceneFilter.performers = { value: [performerId], modifier: "INCLUDES" };
+
+  const imageFilter: Record<string, unknown> = {};
+  if (tagId) imageFilter.tags = { value: [tagId], modifier: "INCLUDES" };
+  if (studioId) imageFilter.studios = { value: [studioId], modifier: "INCLUDES" };
+  if (performerId) imageFilter.performers = { value: [performerId], modifier: "INCLUDES" };
+
   const [scenesData, imagesData] = await Promise.all([
     stashRequest<FindScenesQuery>(FIND_SCENES, {
       filter: {
@@ -47,6 +69,7 @@ if (DEMO_MODE) {
         sort: sceneSort,
         direction: sort !== "random" ? "DESC" : undefined,
       },
+      scene_filter: Object.keys(sceneFilter).length ? sceneFilter : undefined,
     }).catch((e) => { console.error("[discover] scenes fetch failed:", e); return { findScenes: { count: 0, scenes: [] } }; }),
     stashRequest<FindImagesQuery>(FIND_IMAGES, {
       filter: {
@@ -55,6 +78,7 @@ if (DEMO_MODE) {
         sort: imageSort,
         direction: sort !== "random" ? "DESC" : undefined,
       },
+      image_filter: Object.keys(imageFilter).length ? imageFilter : undefined,
     }).catch((e) => { console.error("[discover] images fetch failed:", e); return { findImages: { count: 0, images: [] } }; }),
   ]);
 
@@ -77,7 +101,7 @@ if (DEMO_MODE) {
   offline = true;
 }
 
-const cursorPayload: CursorPayload = { page: 1, perPage: 20, total: count, sort, seed: DEMO_MODE ? demoSeed : seed };
+const cursorPayload: CursorPayload = { page: 1, perPage: 20, total: count, sort, seed: DEMO_MODE ? demoSeed : seed, tagId, studioId, performerId };
 ---
 
 <PageShell title="Substash: Discover">
@@ -96,6 +120,9 @@ const cursorPayload: CursorPayload = { page: 1, perPage: 20, total: count, sort,
       <ImmersiveFeed
         client:only="solid-js"
         sort={sort}
+        tagId={tagId}
+        studioId={studioId}
+        performerId={performerId}
         initialData={{
           items,
           cursor: encodeCursor(cursorPayload),
