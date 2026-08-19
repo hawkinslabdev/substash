@@ -199,7 +199,10 @@ export default function CommentSheet(props: Props) {
           <div
             class="absolute inset-0 bg-black/40 transition-opacity duration-300 touch-none"
             classList={{ "opacity-0": !shown() }}
-            onClick={requestClose}
+            onClick={(e) => {
+              e.stopPropagation();
+              requestClose();
+            }}
             onWheel={(e) => e.preventDefault()}
           />
           {/* Sheet */}

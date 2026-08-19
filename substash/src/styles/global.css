@@ -183,6 +183,10 @@
   overscroll-behavior-y: contain;
   background: black;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.immersive-container::-webkit-scrollbar {
+  display: none;
 }
 @media (min-width: 1024px) {
   .immersive-container {
