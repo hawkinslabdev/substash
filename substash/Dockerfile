@@ -1,5 +1,5 @@
 # Build stage
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 ARG BUILD_VERSION
 ENV VITE_APP_VERSION=${BUILD_VERSION}
 
@@ -17,7 +17,7 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 # Runtime stage
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV DB_PATH=/app/data/substash.db
