@@ -14,7 +14,7 @@ RUN mkdir -p migrations
 RUN npm rebuild better-sqlite3
 RUN npm run build
 
-RUN npm prune --omit=dev
+RUN npm prune --omit=dev --omit=optional
 
 # Runtime stage
 FROM node:24-alpine AS runtime
