@@ -221,8 +221,7 @@ export function formatOriginDisplay(
 }
 
 export type ValidationResult =
-  | { ok: true; mode: "expression" | "script" }
-  | { ok: false; error: string };
+  { ok: true; mode: "expression" | "script" } | { ok: false; error: string };
 
 /** Syntax-check a script without running it. Reports which mode it will use. */
 export function validateTitleExpr(expr: string): ValidationResult {

@@ -60,6 +60,7 @@ const dayDisplay = sub.day;
 
 const file = image.files[0];
 const mediaAspect = file ? `${file.width} / ${file.height}` : "1 / 1";
+const isPortrait = file ? file.height > file.width : false;
 const imgSrc = proxyImage(image.paths.preview || image.paths.thumbnail);
 ---
 
@@ -75,7 +76,7 @@ const imgSrc = proxyImage(image.paths.preview || image.paths.thumbnail);
   </header>
 
   {/* Image / GIF (video) */}
-  <div class="media-frame relative w-full bg-black overflow-hidden" style={`aspect-ratio: ${mediaAspect}`}>
+  <div class={`media-frame relative w-full bg-black overflow-hidden${isPortrait ? ' portrait' : ''}`} style={`aspect-ratio: ${mediaAspect}`}>
     {/* Blurred background to fill pillarbox/letterbox */}
     {proxyImage(image.paths.thumbnail) && (
       <img
@@ -92,7 +93,7 @@ const imgSrc = proxyImage(image.paths.preview || image.paths.thumbnail);
         id="scene-video"
         src={imgSrc}
         poster={proxyImage(image.paths.thumbnail)!}
-        class="relative w-full h-full object-contain"
+        class="relative w-full h-full object-contain bg-transparent"
         loop
         muted
         playsinline

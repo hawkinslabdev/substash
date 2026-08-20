@@ -117,7 +117,7 @@ export default function VideoPlayer(props: Props) {
         onLoadedData={() => {
           if (!posterOk()) grabFrameBackdrop();
         }}
-        class="relative z-[1] w-full h-full object-contain"
+        class="relative z-[1] w-full h-full object-contain bg-transparent"
       />
       {/* Stand-in backdrop, only when the real poster never arrived */}
       <Show when={frameBg()}>

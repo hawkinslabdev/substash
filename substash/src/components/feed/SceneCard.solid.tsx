@@ -23,6 +23,7 @@ export default function SceneCard(props: Props) {
   const file = () => scene().files[0];
   const mediaAspect = () =>
     file() ? `${file()!.width} / ${file()!.height}` : "16 / 9";
+  const isPortrait = () => (file() ? file()!.height > file()!.width : false);
 
   function handleShare() {
     shareMedia(scene().id, "scene", scene().title);
@@ -126,7 +127,7 @@ export default function SceneCard(props: Props) {
 
       {/* Media clicking anywhere except the mute button navigates to detail */}
       <div
-        class="media-frame relative w-full bg-black overflow-hidden cursor-pointer"
+        class={`media-frame relative w-full bg-black overflow-hidden cursor-pointer${isPortrait() ? " portrait" : ""}`}
         style={{
           "aspect-ratio": mediaAspect(),
           "view-transition-name": `scene-${scene().id}`,

@@ -164,7 +164,7 @@
 /* Portrait media (9:16) at full card width runs past the viewport. Cap the frame:
    the aspect-ratio box shrinks and the object-contain video/img inside letterboxes
    over the blurred backdrop that already fills the frame. */
-.media-frame {
+.media-frame.portrait {
   max-height: 72vh;
   max-height: 72svh;
 }

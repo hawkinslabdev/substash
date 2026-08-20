@@ -40,6 +40,7 @@ if (sceneTags.length > 0 && filterTagList(sceneTags).length === 0) {
 const streamUrl = scene.paths.stream ? `/api/stash/stream/${id}` : null;
 const file = scene.files[0];
 const mediaAspect = file ? `${file.width} / ${file.height}` : "16 / 9";
+const isPortrait = file ? file.height > file.width : false;
 const duration = file?.duration;
 const durationStr = duration
   ? `${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, "0")}`
@@ -82,7 +83,7 @@ const commentCount = getCommentCounts([id]).get(id) ?? 0;
 
   {/* Video */}
   {streamUrl ? (
-    <div class="media-frame relative w-full bg-black overflow-hidden" style={`aspect-ratio: ${mediaAspect}; view-transition-name: scene-${id}`}>
+    <div class={`media-frame relative w-full bg-black overflow-hidden${isPortrait ? ' portrait' : ''}`} style={`aspect-ratio: ${mediaAspect}; view-transition-name: scene-${id}`}>
       {/* Blurred background to fill pillarbox/letterbox */}
       {proxyImage(scene.paths.screenshot) && (
         <img
@@ -105,7 +106,7 @@ const commentCount = getCommentCounts([id]).get(id) ?? 0;
         muted
         playsinline
         preload="metadata"
-        class="absolute inset-0 m-auto max-w-full max-h-full"
+        class="absolute inset-0 m-auto max-w-full max-h-full bg-transparent"
       />
       <MediaActionRail
         client:visible

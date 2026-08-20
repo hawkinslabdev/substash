@@ -333,8 +333,7 @@ function FeedInner(props: Props) {
     const spaNavType = sessionStorage.getItem("substash:last-nav-type");
     const perfNavType = (
       performance.getEntriesByType?.("navigation")[0] as
-        | PerformanceNavigationTiming
-        | undefined
+        PerformanceNavigationTiming | undefined
     )?.type;
     const isBackNav =
       spaNavType === "traverse" || perfNavType === "back_forward";
