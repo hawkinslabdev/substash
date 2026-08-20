@@ -104,7 +104,7 @@ export default function RichTextEditor(props: Props) {
   }
 
   return (
-    <div class="rounded-xl border border-[var(--color-border)] overflow-hidden focus-within:border-[var(--color-accent)] transition-colors bg-[var(--color-surface-3)]">
+    <div class="rounded-control border border-[var(--color-border)] overflow-hidden focus-within:border-[var(--color-accent)] transition-colors bg-[var(--color-surface-3)]">
       {/* Toolbar */}
       <div class="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-[var(--color-border)] bg-[var(--color-surface-2)]">
         <Btn title="Bold (Ctrl+B)" onClick={() => exec("bold")}>
@@ -236,19 +236,19 @@ export default function RichTextEditor(props: Props) {
             }}
             placeholder="https://…"
             autofocus
-            class="flex-1 min-w-0 bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-md px-2.5 py-1 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] min-h-0"
+            class="flex-1 min-w-0 bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-inner px-2.5 py-1 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] min-h-0"
           />
           <button
             type="button"
             onClick={confirmLink}
-            class="px-3 py-1 rounded-md bg-[var(--color-accent)] text-white text-xs font-medium min-h-0 h-auto"
+            class="px-3 py-1 rounded-inner bg-[var(--color-accent)] text-white text-xs font-medium min-h-0 h-auto"
           >
             Add
           </button>
           <button
             type="button"
             onClick={cancelLink}
-            class="px-3 py-1 rounded-md bg-[var(--color-surface-3)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-xs min-h-0 h-auto"
+            class="px-3 py-1 rounded-inner bg-[var(--color-surface-3)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-xs min-h-0 h-auto"
           >
             ✕
           </button>
@@ -274,7 +274,7 @@ export default function RichTextEditor(props: Props) {
           type="button"
           onClick={handleSubmit}
           disabled={empty() || props.pending}
-          class="px-4 py-1.5 rounded-full bg-[var(--color-accent)] text-white text-xs font-medium disabled:opacity-40 active:scale-95 transition-all min-h-0 h-auto"
+          class="px-4 py-1.5 rounded-control bg-[var(--color-accent)] text-white text-xs font-medium disabled:opacity-40 active:scale-95 transition-all min-h-0 h-auto"
         >
           {props.pending ? "Posting…" : "Post"}
         </button>

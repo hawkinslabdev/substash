@@ -10,6 +10,12 @@ const MAX_CACHE_ENTRIES = 2000;
 const BROWSER_CACHE =
   "public, max-age=86400, stale-while-revalidate=604800, immutable";
 
+// 1x1 transparent GIF
+const TRANSPARENT_PIXEL = Uint8Array.from(
+  atob("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"),
+  (c) => c.charCodeAt(0),
+);
+
 interface CachedImage {
   data: ArrayBuffer;
   contentType: string;
@@ -139,6 +145,16 @@ export const GET: APIRoute = async ({ request }) => {
     const contentType = upstream.headers.get("content-type") ?? "image/jpeg";
     const etag = upstream.headers.get("etag");
     const body = await upstream.arrayBuffer();
+
+    // Scenes without a generated screenshot get a Font Awesome play-icon SVG from
+    // Stash. Blurred as a card backdrop it reads as a giant play glyph, so swap it
+    // for a transparent pixel: the black frame shows through and no consumer has to
+    // handle a broken image (404 would render the browser's broken-image glyph).
+    if (contentType.includes("svg")) {
+      return new Response(TRANSPARENT_PIXEL, {
+        headers: cacheHeaders("image/gif", null),
+      });
+    }
 
     evict();
     imageCache.set(imageUrl, {

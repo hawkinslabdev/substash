@@ -31,7 +31,7 @@ const { tags } = Astro.props;
       <li>
         <a
           href={`/tags/${tag.id}`}
-          class="flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:bg-[var(--color-surface-3)] hover:border-[var(--color-text-muted)]/20 active:scale-95 transition-all"
+          class="flex flex-col overflow-hidden rounded-card bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:bg-[var(--color-surface-3)] hover:border-[var(--color-text-muted)]/20 active:scale-95 transition-all"
         >
           <BlurHash
             src={proxyImage(tag.image_path)}

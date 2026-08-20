@@ -48,7 +48,7 @@ export default function VoteButton(props: Props) {
         disabled={store.pending()}
         aria-label={props.label ?? "Vote"}
         class={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium tabular-nums transition-all",
+          "flex items-center gap-1.5 px-3 py-1.5 rounded-control text-sm font-medium tabular-nums transition-all",
           "active:scale-95",
           bursting() && "vote-pop",
           store.voted()

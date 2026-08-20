@@ -267,9 +267,10 @@ export default function ImageCard(props: Props) {
           title={image().title ?? undefined}
           thumbnailUrl={image().paths.thumbnail ?? undefined}
         />
-        <button
-          onClick={() => setCommentsOpen(true)}
-          class="inline-flex items-center gap-1.5 px-3 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] active:scale-95 transition-all hover:text-[var(--color-text)] min-h-[44px]"
+        <a
+          href={`/images/${image().id}#comments`}
+          data-astro-prefetch
+          class="inline-flex items-center gap-1.5 px-3 rounded-control text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] active:scale-95 transition-all hover:text-[var(--color-text)] min-h-[44px]"
         >
           <svg
             width="13"
@@ -286,11 +287,11 @@ export default function ImageCard(props: Props) {
             />
           </svg>
           Comments
-        </button>
+        </a>
         <button
           onClick={handleShare}
           aria-label="Share"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] active:scale-95 transition-all hover:text-[var(--color-text)]"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-control text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] active:scale-95 transition-all hover:text-[var(--color-text)]"
         >
           <svg
             width="13"

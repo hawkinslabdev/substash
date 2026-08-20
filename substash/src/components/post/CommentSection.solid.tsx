@@ -1,4 +1,4 @@
-import { createSignal, createResource, Show } from "solid-js";
+import { createSignal, createResource, Show, onMount } from "solid-js";
 import CommentThread from "./CommentThread.solid";
 import CommentForm from "./CommentForm.solid";
 import type { Comment } from "@/lib/db/schema";
@@ -21,13 +21,26 @@ async function fetchComments(stashId: string): Promise<Comment[]> {
 function CommentSkeleton() {
   return (
     <div class="space-y-2">
-      <div class="skeleton-shimmer h-14 rounded-lg" />
-      <div class="skeleton-shimmer h-10 rounded-lg opacity-60 ml-4" />
+      <div class="skeleton-shimmer h-14 rounded-inner" />
+      <div class="skeleton-shimmer h-10 rounded-inner opacity-60 ml-4" />
     </div>
   );
 }
 
 export default function CommentSection(props: Props) {
+  // Arriving from a card's Comments button (/scenes/1#comments). The anchor is
+  // above this island, so its offset is settled by the time we mount.
+  onMount(() => {
+    if (location.hash !== "#comments") return;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    requestAnimationFrame(() =>
+      document.getElementById("comments")?.scrollIntoView({
+        behavior: reduced ? "auto" : "smooth",
+        block: "start",
+      }),
+    );
+  });
+
   const [refetchKey, setRefetchKey] = createSignal(0);
   const [highlightId, setHighlightId] = createSignal<string | null>(null);
   const [comments] = createResource(

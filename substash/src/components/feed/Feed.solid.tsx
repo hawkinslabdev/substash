@@ -101,7 +101,7 @@ function FeedSkeleton() {
   return (
     <div class="p-4 space-y-3">
       <div
-        class="skeleton-shimmer w-full rounded-lg"
+        class="skeleton-shimmer w-full rounded-card"
         style={{ "aspect-ratio": "16/9" }}
       />
       <div class="skeleton-shimmer h-3.5 w-2/3" />

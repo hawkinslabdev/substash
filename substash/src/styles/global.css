@@ -14,6 +14,7 @@
   --radius-card: 16px;
   --radius-sheet: 24px;
   --radius-control: 12px;
+  --radius-inner: 8px;
   --bottom-nav-height: 56px;
   --header-height: 48px;
   /* Liquid Glass material — floating chrome only (nav, headers, overlays, sheets) */
@@ -164,8 +165,8 @@
    the aspect-ratio box shrinks and the object-contain video/img inside letterboxes
    over the blurred backdrop that already fills the frame. */
 .media-frame {
-  max-height: 70vh;
-  max-height: 70svh;
+  max-height: 72vh;
+  max-height: 72svh;
 }
 
 /* Mobile cards: seamless rounded slabs — no hairline dividers, media inset
@@ -175,6 +176,9 @@
     margin-bottom: 8px;
   }
   .feed-item .media-frame {
+    /* Cards carry w-full; without width:auto the 8px margins push the frame
+       16px past the viewport and only the left inset stays visible */
+    width: auto;
     margin-inline: 8px;
     border-radius: var(--radius-card);
     overflow: hidden;

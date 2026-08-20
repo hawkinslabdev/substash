@@ -67,7 +67,7 @@ export default function CommentThread(props: Props) {
           return (
             <li class="space-y-1">
               <div
-                class="rounded-lg bg-[var(--color-surface-3)] p-3 text-sm"
+                class="rounded-inner bg-[var(--color-surface-3)] p-3 text-sm"
                 classList={{
                   "comment-highlight": comment.id === props.highlightId,
                 }}

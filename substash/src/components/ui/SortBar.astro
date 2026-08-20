@@ -27,7 +27,7 @@ const currentLabel = sorts.find((s) => s.key === sort)?.label ?? sort;
       <a
         href={`${baseUrl}?sort=${s.key}`}
         class:list={[
-          "flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap shrink-0 transition-all active:scale-95",
+          "flex items-center gap-1.5 px-4 py-1.5 rounded-control text-sm font-semibold whitespace-nowrap shrink-0 transition-all active:scale-95",
           s.key === sort
             ? "bg-[var(--color-accent)] text-white shadow-sm"
             : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text)]",
@@ -56,7 +56,7 @@ const currentLabel = sorts.find((s) => s.key === sort)?.label ?? sort;
 ) : (
   <div class="sort-bar px-3 py-2 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
     <details class="sort-dropdown relative inline-block">
-      <summary class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] active:scale-95 text-sm font-medium cursor-pointer select-none transition-all list-none">
+      <summary class="flex items-center gap-1.5 px-3 py-1.5 rounded-control bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] active:scale-95 text-sm font-medium cursor-pointer select-none transition-all list-none">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-accent)] shrink-0">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M7 12h10M11 18h2" />
         </svg>
@@ -66,7 +66,7 @@ const currentLabel = sorts.find((s) => s.key === sort)?.label ?? sort;
         </svg>
       </summary>
 
-      <div class="sort-menu absolute top-full left-0 mt-1.5 z-40 min-w-[160px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] shadow-2xl overflow-hidden">
+      <div class="sort-menu absolute top-full left-0 mt-1.5 z-40 min-w-[160px] rounded-control border border-[var(--color-border)] bg-[var(--color-surface-2)] shadow-2xl overflow-hidden">
         {sorts.map((s) => (
           <a
             href={`${baseUrl}?sort=${s.key}`}

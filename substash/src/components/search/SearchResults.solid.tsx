@@ -138,7 +138,7 @@ function SearchSkeleton() {
   return (
     <div class="p-4 space-y-3">
       <div
-        class="skeleton-shimmer w-full rounded-lg"
+        class="skeleton-shimmer w-full rounded-card"
         style={{ "aspect-ratio": "16/9" }}
       />
       <div class="skeleton-shimmer h-3.5 w-2/3" />
@@ -149,7 +149,7 @@ function SearchSkeleton() {
 
 function SyncingBanner(props: { totalIndexed: number }) {
   return (
-    <div class="mx-4 mt-4 px-4 py-3.5 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] flex items-center gap-3">
+    <div class="mx-4 mt-4 px-4 py-3.5 rounded-control bg-[var(--color-surface-2)] border border-[var(--color-border)] flex items-center gap-3">
       <div class="w-4 h-4 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin shrink-0" />
       <div>
         <p class="text-xs font-semibold text-[var(--color-text)]">
@@ -294,7 +294,7 @@ function CommentCard(props: { hit: CommentHit }) {
       <Show
         when={thumb}
         fallback={
-          <div class="w-12 h-12 rounded-lg bg-[var(--color-surface-3)] shrink-0 flex items-center justify-center mt-0.5">
+          <div class="w-12 h-12 rounded-inner bg-[var(--color-surface-3)] shrink-0 flex items-center justify-center mt-0.5">
             <svg
               width="18"
               height="18"
@@ -318,7 +318,7 @@ function CommentCard(props: { hit: CommentHit }) {
           alt=""
           width="48"
           height="48"
-          class="w-12 h-12 rounded-lg object-cover shrink-0 bg-[var(--color-surface-3)] mt-0.5"
+          class="w-12 h-12 rounded-inner object-cover shrink-0 bg-[var(--color-surface-3)] mt-0.5"
           loading="lazy"
         />
       </Show>
@@ -610,7 +610,7 @@ function SearchResultsInner(props: Props) {
                   {(tab) => (
                     <button
                       onClick={() => setFilter(tab.value)}
-                      class={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                      class={`shrink-0 px-3 py-1 rounded-control text-xs font-semibold transition-colors ${
                         filter() === tab.value
                           ? "bg-[var(--color-accent)] text-white"
                           : "bg-[var(--color-surface-3)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
@@ -667,7 +667,7 @@ function SearchResultsInner(props: Props) {
               {(tab) => (
                 <button
                   onClick={() => setSubFilter(tab.value)}
-                  class={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                  class={`shrink-0 px-3 py-1 rounded-control text-xs font-semibold transition-colors ${
                     subFilter() === tab.value
                       ? "bg-[var(--color-accent)] text-white"
                       : "bg-[var(--color-surface-3)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
@@ -719,7 +719,7 @@ function SearchResultsInner(props: Props) {
                 e.stopPropagation();
                 setSortOpen(!sortOpen());
               }}
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:bg-[var(--color-surface-3)] active:scale-95 transition-all cursor-pointer select-none"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-control text-xs font-medium bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:bg-[var(--color-surface-3)] active:scale-95 transition-all cursor-pointer select-none"
             >
               <svg
                 width="12"
@@ -763,7 +763,7 @@ function SearchResultsInner(props: Props) {
               </svg>
             </button>
             <Show when={sortOpen()}>
-              <div class="absolute top-full left-0 mt-1.5 z-50 min-w-[150px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden">
+              <div class="absolute top-full left-0 mt-1.5 z-50 min-w-[150px] rounded-control border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden">
                 <For each={SORT_OPTIONS}>
                   {(opt) => (
                     <button
@@ -914,7 +914,7 @@ function SearchResultsInner(props: Props) {
                       <div class="flex items-center group">
                         <a
                           href={`/search?q=${encodeURIComponent(item)}`}
-                          class="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-3)] active:scale-[0.98] transition-all"
+                          class="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-control hover:bg-[var(--color-surface-3)] active:scale-[0.98] transition-all"
                         >
                           <svg
                             width="14"
@@ -983,7 +983,7 @@ function SearchResultsInner(props: Props) {
                 {({ href, label, desc, svg }) => (
                   <a
                     href={href}
-                    class="flex items-center gap-3.5 px-4 py-3 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:border-[var(--color-text-muted)]/30 hover:bg-[var(--color-surface-3)] active:scale-[0.98] transition-all"
+                    class="flex items-center gap-3.5 px-4 py-3 rounded-control bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:border-[var(--color-text-muted)]/30 hover:bg-[var(--color-surface-3)] active:scale-[0.98] transition-all"
                   >
                     <span class="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-surface-3)] text-[var(--color-accent)] shrink-0">
                       <svg

@@ -209,7 +209,7 @@ export default function CommentSheet(props: Props) {
           <div
             ref={sheet}
             tabindex="-1"
-            class="glass-strong absolute bottom-0 inset-x-0 lg:max-w-[720px] lg:mx-auto rounded-t-[var(--radius-sheet)] flex flex-col focus:outline-none"
+            class="glass-strong absolute bottom-0 inset-x-0 lg:max-w-[720px] lg:mx-auto rounded-t-sheet flex flex-col focus:outline-none"
             style={{
               height: "75dvh",
               "border-bottom": "0",

@@ -94,6 +94,9 @@ const commentCount = getCommentCounts([id]).get(id) ?? 0;
           decoding="async"
         />
       )}
+      {/* Sized to the picture rather than stretched with object-contain: Firefox
+          lays native controls against the element box, so a letterboxed video
+          pushes the control bar outside the frame's overflow-hidden clip. */}
       <video
         id="scene-video"
         src={streamUrl}
@@ -102,7 +105,7 @@ const commentCount = getCommentCounts([id]).get(id) ?? 0;
         muted
         playsinline
         preload="metadata"
-        class="relative w-full h-full object-contain"
+        class="absolute inset-0 m-auto max-w-full max-h-full"
       />
       <MediaActionRail
         client:visible
@@ -135,7 +138,7 @@ const commentCount = getCommentCounts([id]).get(id) ?? 0;
         {scene.performers.map((p) => (
           <a
             href={`/performers/${p.id}`}
-            class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[var(--color-surface-3)] border border-[var(--color-border)] text-sm hover:border-[var(--color-accent)] transition-colors"
+            class="flex items-center gap-2 px-2.5 py-1 rounded-control bg-[var(--color-surface-3)] border border-[var(--color-border)] text-sm hover:border-[var(--color-accent)] transition-colors"
           >
             <BlurHash src={proxyImage(p.image_path)} alt={p.name} width={28} height={28} class="w-7 h-7 rounded-full" />
             {p.name}
@@ -178,7 +181,7 @@ const commentCount = getCommentCounts([id]).get(id) ?? 0;
         {scene.tags.map((t) => (
           <a
             href={`/tags/${t.id}`}
-            class="px-2 py-0.5 rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)] text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            class="px-2.5 py-1 rounded-control bg-[var(--color-surface-2)] border border-[var(--color-border)] text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
           >
             {t.name}
           </a>
@@ -207,7 +210,7 @@ const commentCount = getCommentCounts([id]).get(id) ?? 0;
         href={`/api/stash/open?type=scene&id=${id}`}
         target="_blank"
         rel="noopener noreferrer"
-        class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] active:scale-95 transition-all hover:text-[var(--color-text)] min-h-[44px]"
+        class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-control text-sm text-[var(--color-text-muted)] bg-[var(--color-surface-3)] active:scale-95 transition-all hover:text-[var(--color-text)] min-h-[44px]"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
@@ -222,7 +225,7 @@ const commentCount = getCommentCounts([id]).get(id) ?? 0;
   <div class="h-px bg-[var(--color-border)]" />
 
   {/* Comments */}
-  <div id="comments">
+  <div id="comments" class="scroll-mt-16">
     <CommentSection client:only="solid-js" stashId={scene.id} mediaType="scene" title={displayTitle} thumbnailUrl={scene.paths.screenshot ?? undefined} />
   </div>
 

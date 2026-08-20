@@ -374,7 +374,7 @@ export default function Settings(props: Props) {
   return (
     <div class="pb-16">
       <Show when={toast()}>
-        <div class="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text)] shadow-lg pointer-events-none">
+        <div class="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-control text-sm text-[var(--color-text)] shadow-lg pointer-events-none">
           {toast()}
         </div>
       </Show>
@@ -418,7 +418,7 @@ export default function Settings(props: Props) {
               </p>
             </div>
             {/* Custom +/- stepper */}
-            <div class="flex items-center shrink-0 rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-3)]">
+            <div class="flex items-center shrink-0 rounded-control overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-3)]">
               <button
                 onClick={() => adjustHours(-1)}
                 aria-label="Decrease"
@@ -479,7 +479,7 @@ export default function Settings(props: Props) {
                 value={pinBoxes()[i]}
                 onInput={(e) => updateBox(i, e.currentTarget.value)}
                 onKeyDown={(e) => handleBoxKeyDown(e, i)}
-                class="w-11 h-13 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl text-center text-lg font-semibold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] uppercase caret-[var(--color-accent)] transition-colors"
+                class="w-11 h-13 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-control text-center text-lg font-semibold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] uppercase caret-[var(--color-accent)] transition-colors"
               />
             ))}
           </div>
@@ -490,7 +490,7 @@ export default function Settings(props: Props) {
             <button
               onClick={submitPin}
               disabled={pinLoading()}
-              class="h-11 px-6 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
+              class="h-11 px-6 rounded-control bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
             >
               {pinLoading() ? "Saving…" : "Save PIN"}
             </button>
@@ -571,7 +571,7 @@ export default function Settings(props: Props) {
                 <button
                   onClick={() => setThemeMode(mode.key)}
                   aria-pressed={themeMode() === mode.key}
-                  class={`flex flex-col items-start gap-2 p-3 rounded-[var(--radius-control)] border transition-colors ${
+                  class={`flex flex-col items-start gap-2 p-3 rounded-control border transition-colors ${
                     themeMode() === mode.key
                       ? "border-[var(--color-accent)]"
                       : "border-[var(--color-border)] hover:border-[var(--color-text-muted)]/40"
@@ -579,7 +579,7 @@ export default function Settings(props: Props) {
                   style={{ background: mode.bg }}
                 >
                   <span
-                    class="block w-16 h-8 rounded-md border border-[var(--color-border)]"
+                    class="block w-16 h-8 rounded-inner border border-[var(--color-border)]"
                     style={{ background: mode.card }}
                     aria-hidden="true"
                   />
@@ -681,7 +681,7 @@ export default function Settings(props: Props) {
                 rows={6}
                 spellcheck={false}
                 autocomplete="off"
-                class={`w-full font-mono text-sm bg-[var(--color-surface-3)] border rounded-xl px-3 py-2.5 text-[var(--color-text)] focus:outline-none transition-colors resize-y leading-relaxed ${
+                class={`w-full font-mono text-sm bg-[var(--color-surface-3)] border rounded-control px-3 py-2.5 text-[var(--color-text)] focus:outline-none transition-colors resize-y leading-relaxed ${
                   titleExprValidation().ok
                     ? "border-[var(--color-border)] focus:border-[var(--color-accent)]"
                     : "border-red-500/60 focus:border-red-500"
@@ -741,7 +741,7 @@ export default function Settings(props: Props) {
                       value={get()}
                       onInput={(e) => set(e.currentTarget.value)}
                       placeholder={ph}
-                      class="w-full font-mono text-xs bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-lg px-2.5 py-1.5 text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                      class="w-full font-mono text-xs bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-inner px-2.5 py-1.5 text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
                     />
                   </div>
                 ))}
@@ -765,7 +765,7 @@ export default function Settings(props: Props) {
                   }
                 >
                   {([name, val]) => (
-                    <div class="px-2.5 py-1.5 bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-lg min-w-0">
+                    <div class="px-2.5 py-1.5 bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-inner min-w-0">
                       <p class="text-[9px] font-mono text-[var(--color-text-muted)] mb-0.5 tracking-wide">
                         {name}
                       </p>
@@ -802,7 +802,7 @@ export default function Settings(props: Props) {
                     }
                   >
                     {([name, val]) => (
-                      <div class="px-2.5 py-1.5 bg-[var(--color-surface-3)] border border-[var(--color-accent)]/30 rounded-lg min-w-0">
+                      <div class="px-2.5 py-1.5 bg-[var(--color-surface-3)] border border-[var(--color-accent)]/30 rounded-inner min-w-0">
                         <p class="text-[9px] font-mono text-[var(--color-text-muted)] mb-0.5 tracking-wide">
                           {name}
                         </p>
@@ -825,7 +825,7 @@ export default function Settings(props: Props) {
                   !titleExprDirty() ||
                   titleExprSaving()
                 }
-                class="h-10 px-5 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                class="h-10 px-5 rounded-control bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {titleExprSaving() ? "Saving…" : "Save"}
               </button>
@@ -901,7 +901,7 @@ export default function Settings(props: Props) {
                     value={get()}
                     onInput={(e) => set(e.currentTarget.value)}
                     placeholder={placeholder}
-                    class="w-full text-sm bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-xl px-3 py-2.5 text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                    class="w-full text-sm bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-control px-3 py-2.5 text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
                   />
                 </div>
               ))}
@@ -909,7 +909,7 @@ export default function Settings(props: Props) {
                 <button
                   onClick={savePageNames}
                   disabled={!pageNamesDirty() || pageNamesSaving()}
-                  class="h-10 px-5 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  class="h-10 px-5 rounded-control bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   {pageNamesSaving() ? "Saving…" : "Save"}
                 </button>
@@ -957,7 +957,7 @@ export default function Settings(props: Props) {
             title="Fallback community"
             sub="Shown when no community is found in the title"
           />
-          <div class="flex items-center shrink-0 gap-0 rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-3)]">
+          <div class="flex items-center shrink-0 gap-0 rounded-control overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-3)]">
             <Show when={feedShowPrefix()}>
               <span class="pl-3 pr-1 text-sm font-mono text-[var(--color-text-muted)] select-none">
                 r/
@@ -979,7 +979,7 @@ export default function Settings(props: Props) {
             <button
               onClick={saveFeed}
               disabled={feedSaving()}
-              class="h-9 px-5 rounded-xl bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              class="h-9 px-5 rounded-control bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {feedSaving() ? "Saving…" : "Save"}
             </button>
@@ -1119,7 +1119,7 @@ function PillButton(props: {
     <button
       onClick={props.onClick}
       disabled={props.disabled}
-      class={`text-xs px-2.5 py-1.5 rounded-lg transition-colors hover:bg-[var(--color-surface-3)] disabled:opacity-40 disabled:cursor-not-allowed ${props.danger ? "text-red-400 hover:text-red-300" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
+      class={`text-xs px-2.5 py-1.5 rounded-inner transition-colors hover:bg-[var(--color-surface-3)] disabled:opacity-40 disabled:cursor-not-allowed ${props.danger ? "text-red-400 hover:text-red-300" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
     >
       {props.children}
     </button>

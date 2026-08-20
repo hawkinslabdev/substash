@@ -19,9 +19,34 @@ export default function VideoPlayer(props: Props) {
   const [playing, setPlaying] = createSignal(false);
   // First real frame rendered, poster overlay can go
   const [started, setStarted] = createSignal(false);
+  // A scene with no poster at all needs the stand-in too, not just one whose
+  // poster resolves to the proxy's transparent pixel
+  const [posterOk, setPosterOk] = createSignal(!!props.poster);
   const [preload, setPreload] = createSignal<"none" | "metadata">(
     props.warm ? "metadata" : "none",
   );
+  // Scenes with no generated screenshot get a transparent pixel from the image
+  // proxy, so the card's blurred backdrop is empty and portrait video sits in
+  // black bars. Grab one frame off the video itself to stand in for it.
+  const [frameBg, setFrameBg] = createSignal<string | null>(null);
+
+  function grabFrameBackdrop() {
+    if (!videoEl || frameBg()) return;
+    const { videoWidth, videoHeight } = videoEl;
+    if (!videoWidth || !videoHeight) return;
+    try {
+      // Tiny canvas: it is blurred to mush anyway, and keeps the grab cheap
+      const canvas = document.createElement("canvas");
+      canvas.width = 48;
+      canvas.height = Math.max(1, Math.round((48 * videoHeight) / videoWidth));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+      setFrameBg(canvas.toDataURL("image/jpeg", 0.6));
+    } catch {
+      // Cross-origin stream taints the canvas; leave the frame black
+    }
+  }
 
   onMount(() => {
     if (!videoEl) return;
@@ -85,13 +110,30 @@ export default function VideoPlayer(props: Props) {
         playsinline
         loop
         preload={preload()}
-        onPlaying={() => setStarted(true)}
-        class="w-full h-full object-contain"
+        onPlaying={() => {
+          setStarted(true);
+          if (!posterOk()) grabFrameBackdrop();
+        }}
+        onLoadedData={() => {
+          if (!posterOk()) grabFrameBackdrop();
+        }}
+        class="relative z-[1] w-full h-full object-contain"
       />
+      {/* Stand-in backdrop, only when the real poster never arrived */}
+      <Show when={frameBg()}>
+        {(bg) => (
+          <img
+            src={bg()}
+            alt=""
+            aria-hidden="true"
+            class="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-60"
+          />
+        )}
+      </Show>
       {/* Poster overlay: iOS Safari drops the native poster and shows a black
           player as soon as metadata loads, keep the thumbnail visible until
           the first real frame plays. */}
-      <Show when={props.poster && !started()}>
+      <Show when={props.poster && !started() && posterOk()}>
         <img
           src={props.poster!}
           alt=""
@@ -100,6 +142,18 @@ export default function VideoPlayer(props: Props) {
           decoding="async"
         />
       </Show>
+      {/* Off-screen probe: a 1x1 answer means "no screenshot", not "a black one" */}
+      <img
+        src={props.poster ?? undefined}
+        alt=""
+        aria-hidden="true"
+        class="hidden"
+        decoding="async"
+        onLoad={(e) => {
+          if (e.currentTarget.naturalWidth <= 1) setPosterOk(false);
+        }}
+        onError={() => setPosterOk(false)}
+      />
       <button
         onClick={toggleMute}
         aria-label={muted() ? "Unmute" : "Mute"}
