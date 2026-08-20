@@ -200,7 +200,6 @@ function FeedInner(props: Props) {
     getNextPageParam: (last: PageResult) => last.nextCursor ?? undefined,
     // Prefer sessionStorage cache (multi-page) over SSR initialData (single page).
     // Both only apply for refreshKey=0 (not after a manual pull-to-refresh).
-    // initialDataUpdatedAt=now so TanStack treats it as fresh for staleTime.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     initialData: (refreshKey() === 0
       ? cachedFeed
@@ -209,7 +208,6 @@ function FeedInner(props: Props) {
           ? { pages: [props.initialData], pageParams: [null as string | null] }
           : undefined
       : undefined) as any,
-    initialDataUpdatedAt: refreshKey() === 0 ? Date.now() : undefined,
   }));
 
   const hasStashError = () =>
@@ -244,6 +242,15 @@ function FeedInner(props: Props) {
     if (refreshing() && !query.isFetching) {
       setRefreshing(false);
     }
+  });
+
+  // Invalidate feed when a comment is posted (same-page inline sheet)
+  onMount(() => {
+    const handler = () => queryClient.invalidateQueries({ queryKey: ["feed"] });
+    window.addEventListener("substash:comment-posted", handler);
+    onCleanup(() =>
+      window.removeEventListener("substash:comment-posted", handler),
+    );
   });
 
   // Flash a success check when pull-to-refresh completes.

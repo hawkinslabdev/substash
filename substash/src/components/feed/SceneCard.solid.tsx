@@ -7,6 +7,7 @@ import VoteButton from "@/components/post/VoteButton.solid";
 import { cn } from "@/lib/utils/cn";
 import { proxyImage } from "@/lib/stash/image";
 import { timeAgo } from "@/lib/utils/markdown";
+import { formatCount } from "@/lib/utils/format";
 import { shareMedia } from "@/lib/utils/share";
 import { useVote } from "@/lib/hooks/useVote";
 import type { SceneFeedItem } from "@/lib/stash/feed-item";
@@ -249,6 +250,7 @@ export default function SceneCard(props: Props) {
               d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
             />
           </svg>
+          {scene().commentCount ? formatCount(scene().commentCount) : ""}{" "}
           Comments
         </a>
         <button

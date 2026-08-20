@@ -51,6 +51,11 @@ export default function CommentSection(props: Props) {
   function handlePosted(id: string) {
     setHighlightId(id);
     setRefetchKey((k) => k + 1);
+    window.dispatchEvent(
+      new CustomEvent("substash:comment-posted", {
+        detail: { stashId: props.stashId },
+      }),
+    );
     setTimeout(() => setHighlightId((cur) => (cur === id ? null : cur)), 2000);
   }
 

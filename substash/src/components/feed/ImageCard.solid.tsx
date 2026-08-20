@@ -5,6 +5,7 @@ import VoteButton from "@/components/post/VoteButton.solid";
 import MediaActionRail from "./MediaActionRail.solid";
 import { proxyImage } from "@/lib/stash/image";
 import { timeAgo } from "@/lib/utils/markdown";
+import { formatCount } from "@/lib/utils/format";
 import { shareMedia } from "@/lib/utils/share";
 import { useVote } from "@/lib/hooks/useVote";
 import type { ImageFeedItem } from "@/lib/stash/feed-item";
@@ -286,6 +287,7 @@ export default function ImageCard(props: Props) {
               d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
             />
           </svg>
+          {image().commentCount ? formatCount(image().commentCount) : ""}{" "}
           Comments
         </a>
         <button
