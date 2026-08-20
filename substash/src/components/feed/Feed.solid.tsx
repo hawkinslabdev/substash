@@ -33,6 +33,7 @@ interface Props {
   tagId?: string;
   studioId?: string;
   performerId?: string;
+  subreddit?: string;
   initialData?: PageResult;
 }
 
@@ -136,6 +137,7 @@ export async function fetchPage(
   if (params.tagId) url.searchParams.set("tag", params.tagId);
   if (params.studioId) url.searchParams.set("studio", params.studioId);
   if (params.performerId) url.searchParams.set("performer", params.performerId);
+  if (params.subreddit) url.searchParams.set("subreddit", params.subreddit);
 
   const res = await fetch(url.toString());
   const data: PageResult = await res.json();

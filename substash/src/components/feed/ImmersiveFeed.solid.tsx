@@ -25,6 +25,7 @@ interface Props {
   tagId?: string;
   studioId?: string;
   performerId?: string;
+  subreddit?: string;
   initialData?: PageResult;
 }
 
@@ -45,8 +46,10 @@ interface ImmersiveCache {
   savedAt: number;
 }
 
-const filterKey = (props: Pick<Props, "tagId" | "studioId" | "performerId">) =>
-  `${props.tagId ?? ""}:${props.studioId ?? ""}:${props.performerId ?? ""}`;
+const filterKey = (
+  props: Pick<Props, "tagId" | "studioId" | "performerId" | "subreddit">,
+) =>
+  `${props.tagId ?? ""}:${props.studioId ?? ""}:${props.performerId ?? ""}:${props.subreddit ?? ""}`;
 const cacheKey = (sort?: string, filters = "") =>
   `substash:immersive:${sort ?? "random"}:${filters}`;
 const indexKey = (sort?: string, filters = "") =>
@@ -268,6 +271,7 @@ function ImmersiveInner(props: Props) {
         tagId: props.tagId,
         studioId: props.studioId,
         performerId: props.performerId,
+        subreddit: props.subreddit,
       }),
     initialPageParam: null as string | null,
     getNextPageParam: (last: PageResult) => last.nextCursor ?? undefined,

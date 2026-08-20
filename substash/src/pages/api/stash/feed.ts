@@ -12,6 +12,7 @@ import {
   type ImageFeedItem,
 } from "@/lib/stash/feed-item";
 import { encodeCursor, decodeCursor, nextCursor } from "@/lib/utils/cursor";
+import { searchBySubreddit } from "@/lib/search/query";
 import { getCommentCounts } from "@/lib/db/comment-counts";
 import { filterByTags } from "@/lib/stash/filter";
 
@@ -38,12 +39,40 @@ export const GET: APIRoute = async ({ request }) => {
   const tagId = url.searchParams.get("tag") ?? undefined;
   const studioId = url.searchParams.get("studio") ?? undefined;
   const performerId = url.searchParams.get("performer") ?? undefined;
+  const subreddit = url.searchParams.get("subreddit") ?? undefined;
 
   let page = 1;
+  // Stash reshuffles on every unseeded "random" query, so page 2 repeats page 1.
+  // The seed rides in the cursor; the first request mints it.
+  let seed = Date.now() & 0x7fffffff;
 
   if (cursorParam) {
     const decoded = decodeCursor(cursorParam);
     page = decoded.page;
+    if (decoded.seed) seed = decoded.seed;
+  }
+
+  // Origin browse reads the local search index, not Stash
+  if (subreddit) {
+    const subSort = sort === "rating" || sort === "random" ? sort : "date";
+    const result = searchBySubreddit(subreddit, "all", subSort, page, seed);
+    const payload = {
+      page,
+      perPage: PER_PAGE,
+      total: result.total,
+      sort,
+      seed: subSort === "random" ? seed : undefined,
+      subreddit,
+    };
+    return new Response(
+      JSON.stringify({
+        items: result.items,
+        cursor: encodeCursor(payload),
+        nextCursor: result.hasMore ? nextCursor(payload) : null,
+        total: result.total,
+      }),
+      { headers: { "Content-Type": "application/json" } },
+    );
   }
 
   const sceneFilter: Record<string, unknown> = {};
@@ -61,7 +90,13 @@ export const GET: APIRoute = async ({ request }) => {
     imageFilter.performers = { value: [performerId], modifier: "INCLUDES" };
 
   const stashSceneSort =
-    sort === "rating" ? "o_counter" : sort === "date" ? "created_at" : sort;
+    sort === "rating"
+      ? "o_counter"
+      : sort === "date"
+        ? "created_at"
+        : sort === "random"
+          ? `random_${seed}`
+          : sort;
 
   const sceneStashFilter: Record<string, unknown> = {
     page,
@@ -72,7 +107,7 @@ export const GET: APIRoute = async ({ request }) => {
 
   const buildImageFilter = (): Record<string, unknown> => {
     if (sort === "random")
-      return { page, per_page: TYPES_PER_PAGE, sort: "random" };
+      return { page, per_page: TYPES_PER_PAGE, sort: `random_${seed}` };
     if (sort === "rating")
       return {
         page,
@@ -147,25 +182,19 @@ export const GET: APIRoute = async ({ request }) => {
       if (i < images.length) items.push(images[i]);
     }
 
-    const cursor = encodeCursor({
+    const cursorPayload = {
       page,
       perPage: PER_PAGE,
       total: totalCount,
       sort,
+      seed: sort === "random" ? seed : undefined,
       tagId,
       studioId,
       performerId,
-    });
+    };
 
-    const next = nextCursor({
-      page,
-      perPage: PER_PAGE,
-      total: totalCount,
-      sort,
-      tagId,
-      studioId,
-      performerId,
-    });
+    const cursor = encodeCursor(cursorPayload);
+    const next = nextCursor(cursorPayload);
 
     return new Response(
       JSON.stringify({

@@ -528,6 +528,15 @@ function SearchResultsInner(props: Props) {
     (subredditQuery.data?.pages ?? []).flatMap((p) => p.items) as FeedItem[];
   const subTotal = () => subredditQuery.data?.pages[0]?.total ?? 0;
 
+  // Origin browse → immersive feed of the same items
+  const feedHref = () => {
+    const sub = props.initialSubreddit ?? "";
+    const param = sub.startsWith("u_")
+      ? `user=${encodeURIComponent(sub.slice(2))}`
+      : `r=${encodeURIComponent(sub)}`;
+    return `/discover?${param}&sort=${subSort()}`;
+  };
+
   const isEntityFilter = () =>
     filter() === "tags" || filter() === "performers" || filter() === "studios";
 
@@ -669,9 +678,27 @@ function SearchResultsInner(props: Props) {
               )}
             </For>
             <Show when={subTotal() > 0 && !subredditQuery.isLoading}>
-              <span class="ml-auto shrink-0 text-xs text-[var(--color-text-muted)] pr-1">
+              <a
+                href={feedHref()}
+                aria-label="Play as feed"
+                class="ml-auto -mr-1 shrink-0 flex items-center gap-1.5 min-h-11 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polygon
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    points="5 3 19 12 5 21 5 3"
+                  />
+                </svg>
                 {subTotal().toLocaleString()}
-              </span>
+              </a>
             </Show>
           </div>
         </div>

@@ -10,6 +10,7 @@ import { sceneToFeedItem, imageToFeedItem } from "@/lib/stash/feed-item";
 import { attachCommentCounts } from "@/lib/db/comment-counts";
 import type { FindScenesQuery, FindImagesQuery } from "@/lib/stash/types";
 import { filterByTags } from "@/lib/stash/filter";
+import { searchBySubreddit } from "@/lib/search/query";
 import { DEMO_MODE } from "astro:env/server";
 import { demoFirstPage, demoItemsFiltered } from "@/lib/demo";
 
@@ -24,13 +25,18 @@ const sort: Sort = (ALLOWED_SORTS as readonly string[]).includes(rawSort)
 const tagId = Astro.url.searchParams.get("tag") ?? undefined;
 const studioId = Astro.url.searchParams.get("studio") ?? undefined;
 const performerId = Astro.url.searchParams.get("performer") ?? undefined;
+const rParam = Astro.url.searchParams.get("r")?.trim();
+const userParam = Astro.url.searchParams.get("user")?.trim();
+const subreddit = userParam ? `u_${userParam}` : rParam || undefined;
 
 const TYPES_PER_PAGE = 10;
 
-const seed = sort === "random" ? (Date.now() ^ (Math.random() * 2147483647)) : undefined;
+// Unseeded "random" reshuffles per request, so page 2 would repeat page 1
+const seed = sort === "random" ? (Date.now() & 0x7fffffff) : undefined;
 
-const sceneSort = sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : sort;
-const imageSort = sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : sort;
+const randomSort = `random_${seed}`;
+const sceneSort = sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : randomSort;
+const imageSort = sort === "date" ? "created_at" : sort === "rating" ? "o_counter" : randomSort;
 
 let items: import("@/lib/stash/feed-item").FeedItem[] = [];
 let count = 0;
@@ -39,7 +45,12 @@ let offline = false;
 const hasFilter = !!(tagId || studioId || performerId);
 
 let demoSeed: number | undefined;
-if (DEMO_MODE) {
+if (subreddit) {
+  // Origin browse reads the local search index, not Stash
+  const result = searchBySubreddit(subreddit, "all", sort, 1);
+  items = result.items;
+  count = result.total;
+} else if (DEMO_MODE) {
   if (hasFilter) {
     const demo = demoItemsFiltered({ tagId, studioId, performerId, sort });
     items = demo.items;
@@ -101,7 +112,7 @@ if (DEMO_MODE) {
   offline = true;
 }
 
-const cursorPayload: CursorPayload = { page: 1, perPage: 20, total: count, sort, seed: DEMO_MODE ? demoSeed : seed, tagId, studioId, performerId };
+const cursorPayload: CursorPayload = { page: 1, perPage: 20, total: count, sort, seed: DEMO_MODE ? demoSeed : seed, tagId, studioId, performerId, subreddit };
 ---
 
 <PageShell title="Substash: Discover">
@@ -123,6 +134,7 @@ const cursorPayload: CursorPayload = { page: 1, perPage: 20, total: count, sort,
         tagId={tagId}
         studioId={studioId}
         performerId={performerId}
+        subreddit={subreddit}
         initialData={{
           items,
           cursor: encodeCursor(cursorPayload),

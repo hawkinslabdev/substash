@@ -37,9 +37,14 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
     let page = 1;
-    if (cursorParam) page = decodeCursor(cursorParam).page;
+    let seed = Date.now() & 0x7fffffff;
+    if (cursorParam) {
+      const decoded = decodeCursor(cursorParam);
+      page = decoded.page;
+      if (decoded.seed) seed = decoded.seed;
+    }
     const mediaFilter = type === "scenes" || type === "images" ? type : "all";
-    const result = searchBySubreddit(subreddit, mediaFilter, sort, page);
+    const result = searchBySubreddit(subreddit, mediaFilter, sort, page, seed);
     return json({
       items: result.items,
       entities: [],
@@ -50,6 +55,7 @@ export const GET: APIRoute = async ({ request }) => {
             perPage: 20,
             total: result.total,
             sort: "subreddit",
+            seed: sort === "random" ? seed : undefined,
             subreddit,
             mediaType: type,
           })

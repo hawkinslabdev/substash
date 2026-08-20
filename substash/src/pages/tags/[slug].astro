@@ -121,15 +121,13 @@ const cursorPayload = { page: 1, perPage: 20, total: count, sort, tagId: slug };
         <a
           href={`/discover?tag=${slug}`}
           aria-label="Play as feed"
-          class="ml-auto text-[var(--color-text-muted)] hover:text-[var(--color-text)] shrink-0"
+          class="ml-auto -mr-2 flex items-center gap-1.5 min-h-11 px-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)] shrink-0"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon stroke-linecap="round" stroke-linejoin="round" points="5 3 19 12 5 21 5 3" />
           </svg>
+          <span class="text-xs">{formatCount(count)}</span>
         </a>
-        <span class="text-xs text-[var(--color-text-muted)] shrink-0">
-          {formatCount(count)}
-        </span>
       </header>
 
       <SortBar sort={sort} baseUrl={`/tags/${slug}`} />

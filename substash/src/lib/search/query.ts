@@ -106,11 +106,21 @@ export function searchMedia(
 
 // ── Subreddit exact-match browse ─────────────────────────────────────────────
 
+// SQLite RANDOM() takes no seed, so a multiplicative hash of rowid stands in.
+// 2147483647 is prime, so any non-multiple seed permutes the whole table.
+function seededOrder(seed?: number): string {
+  if (!seed) return "ORDER BY RANDOM()";
+  const s = Math.abs(Math.trunc(seed)) % 2147483647 || 1;
+  return `ORDER BY (rowid * ${s}) % 2147483647`;
+}
+
 export function searchBySubreddit(
   subreddit: string,
   filter: "all" | "scenes" | "images",
   sort: "date" | "rating" | "random",
   page: number,
+  /** Stable shuffle across pages; without it RANDOM() reshuffles per query and page 2 repeats page 1 */
+  seed?: number,
 ): SearchResult {
   const offset = (page - 1) * PER_PAGE;
   const typeFilter =
@@ -124,7 +134,7 @@ export function searchBySubreddit(
     sort === "rating"
       ? "ORDER BY CAST(json_extract(feed_data, '$.o_counter') AS INTEGER) DESC NULLS LAST, indexed_at DESC"
       : sort === "random"
-        ? "ORDER BY RANDOM()"
+        ? seededOrder(seed)
         : "ORDER BY json_extract(feed_data, '$.date') DESC NULLS LAST, indexed_at DESC";
 
   const rows = rawDb
