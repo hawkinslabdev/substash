@@ -82,7 +82,7 @@ const commentCount = getCommentCounts([id]).get(id) ?? 0;
 
   {/* Video */}
   {streamUrl ? (
-    <div class="relative w-full bg-black overflow-hidden" style={`aspect-ratio: ${mediaAspect}; view-transition-name: scene-${id}`}>
+    <div class="media-frame relative w-full bg-black overflow-hidden" style={`aspect-ratio: ${mediaAspect}; view-transition-name: scene-${id}`}>
       {/* Blurred background to fill pillarbox/letterbox */}
       {proxyImage(scene.paths.screenshot) && (
         <img
@@ -121,7 +121,7 @@ const commentCount = getCommentCounts([id]).get(id) ?? 0;
       alt={scene.title ?? "Video"}
       width={file?.width ?? 1280}
       height={file?.height ?? 720}
-      class="w-full"
+      class="media-frame w-full"
       style={`aspect-ratio: ${mediaAspect}; view-transition-name: scene-${id}`}
     />
   )}

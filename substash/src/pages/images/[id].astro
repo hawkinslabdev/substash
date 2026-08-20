@@ -75,7 +75,7 @@ const imgSrc = proxyImage(image.paths.preview || image.paths.thumbnail);
   </header>
 
   {/* Image / GIF (video) */}
-  <div class="relative w-full bg-black overflow-hidden" style={`aspect-ratio: ${mediaAspect}`}>
+  <div class="media-frame relative w-full bg-black overflow-hidden" style={`aspect-ratio: ${mediaAspect}`}>
     {/* Blurred background to fill pillarbox/letterbox */}
     {proxyImage(image.paths.thumbnail) && (
       <img

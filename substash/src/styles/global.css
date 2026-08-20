@@ -160,6 +160,14 @@
   }
 }
 
+/* Portrait media (9:16) at full card width runs past the viewport. Cap the frame:
+   the aspect-ratio box shrinks and the object-contain video/img inside letterboxes
+   over the blurred backdrop that already fills the frame. */
+.media-frame {
+  max-height: 70vh;
+  max-height: 70svh;
+}
+
 /* Mobile cards: seamless rounded slabs — no hairline dividers, media inset
    with concentric radius. Desktop keeps its boxed card treatment. */
 @media (max-width: 1023px) {
