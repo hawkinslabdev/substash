@@ -14,7 +14,7 @@ const navPageNameStudios = getSetting("page_name_studios", "Studios");
 
 const navSections = [
   {
-    category: "FEED",
+    category: "Feed",
     links: [
       {
         href: "/",
@@ -34,7 +34,7 @@ const navSections = [
     ],
   },
   {
-    category: "BROWSE",
+    category: "Browse",
     links: [
       {
         href: "/tags",
@@ -54,7 +54,7 @@ const navSections = [
     ],
   },
   {
-    category: "RECENT",
+    category: "Recent",
     links: [
       {
         href: "/activity/likes",
@@ -69,7 +69,7 @@ const navSections = [
     ],
   },
   {
-    category: "SETTINGS",
+    category: "Settings",
     links: [
       {
         href: "/settings",
@@ -105,7 +105,7 @@ const drawerLinks = [
   <div class="hidden lg:flex flex-col flex-1 overflow-y-auto overflow-x-hidden py-4 gap-5">
     {navSections.map(({ category, links }) => (
       <div>
-        <p class="nav-category px-4 mb-1.5 text-[10px] font-bold tracking-widest text-[var(--color-text-muted)] uppercase select-none whitespace-nowrap overflow-hidden">
+        <p class="nav-category px-4 mb-1.5 text-xs font-semibold text-[var(--color-text-muted)] select-none whitespace-nowrap overflow-hidden">
           {category}
         </p>
         <div class="px-3 space-y-0.5">
@@ -395,6 +395,13 @@ const drawerLinks = [
 
   /* visibility, not opacity: an opacity-animated ancestor makes Chrome defer the
      child's backdrop-filter, which snaps in at the end instead of ramping */
+  /* Touches on sheets and their backdrops never scroll or pull-to-refresh the page behind */
+  #logout-modal,
+  #mobile-drawer,
+  #mobile-drawer-backdrop {
+    touch-action: none;
+    overscroll-behavior: contain;
+  }
   #logout-modal {
     visibility: hidden;
     pointer-events: none;
@@ -673,7 +680,7 @@ const drawerLinks = [
       // Cookie still live; navigating away would look logged out while BACK restores it
       if (confirmBtn) {
         confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Log off failed — retry';
+        confirmBtn.textContent = 'Log off failed. Retry?';
       }
       return;
     }
@@ -683,7 +690,42 @@ const drawerLinks = [
     window.location.href = '/auth';
   }
 
+  // Drag a bottom sheet down to dismiss (same thresholds as CommentSheet)
+  function bindSheetDrag(sheet: HTMLElement | null, onClose: () => void) {
+    if (!sheet || sheet.dataset.dragBound) return;
+    sheet.dataset.dragBound = '1';
+    let startY = 0;
+    let startT = 0;
+    let dy = 0;
+    let base = '';
+    let baseTransition = '';
+    sheet.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+      startT = performance.now();
+      dy = 0;
+      base = sheet.style.transform;
+      baseTransition = sheet.style.transition;
+      sheet.style.transition = 'none';
+    }, { passive: true });
+    sheet.addEventListener('touchmove', (e) => {
+      dy = Math.max(0, e.touches[0].clientY - startY);
+      sheet.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    const end = () => {
+      sheet.style.transition = baseTransition;
+      sheet.style.transform = base;
+      if (dy > 120 || dy / Math.max(1, performance.now() - startT) > 0.5) onClose();
+    };
+    sheet.addEventListener('touchend', end, { passive: true });
+    sheet.addEventListener('touchcancel', end, { passive: true });
+  }
+
   function initDrawerAndModal() {
+    bindSheetDrag(document.getElementById('mobile-drawer'), closeDrawer);
+    // Logout is a centered dialog on desktop, a sheet only on touch widths
+    if (matchMedia('(max-width: 1023px)').matches)
+      bindSheetDrag(document.getElementById('logout-modal-card'), closeLogoutModal);
+
     // Drawer trigger
     document.getElementById('mobile-menu-trigger')?.addEventListener('click', openDrawer);
     document.getElementById('mobile-drawer-backdrop')?.addEventListener('click', closeDrawer);
@@ -743,9 +785,33 @@ const drawerLinks = [
     );
   }
 
+  // Re-tapping the active link scrolls to top; capture phase runs before ClientRouter
+  let navTopBound = false;
+  function bindNavScrollTop() {
+    if (navTopBound) return;
+    navTopBound = true;
+    document.addEventListener(
+      'click',
+      (e) => {
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        const link = (e.target as Element).closest<HTMLAnchorElement>('#sidebar a[aria-current="page"]');
+        if (!link || link.getAttribute('href') !== location.pathname) return;
+        e.preventDefault();
+        // A page can claim the tap (Discover reshuffles); otherwise go to top
+        const claim = new Event('nav:reselect', { cancelable: true });
+        if (!document.dispatchEvent(claim)) return;
+        const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+        // Discover scrolls its own fixed pager, not the window
+        (document.querySelector('.immersive-container') ?? window).scrollTo({ top: 0, behavior });
+      },
+      true,
+    );
+  }
+
   initSidebar();
   initDrawerAndModal();
   bindNavMinimize();
+  bindNavScrollTop();
   document.addEventListener('astro:page-load', () => {
     initSidebar();
     initDrawerAndModal();

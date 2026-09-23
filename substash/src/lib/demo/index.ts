@@ -1,4 +1,8 @@
-import type { ImageFeedItem } from "@/lib/stash/feed-item";
+import type {
+  FeedItem,
+  ImageFeedItem,
+  SceneFeedItem,
+} from "@/lib/stash/feed-item";
 import type { StashImage, StashPerformerDetail } from "@/lib/stash/types";
 import { encodeCursor, nextCursor, decodeCursor } from "@/lib/utils/cursor";
 import { getFeedSettings } from "@/lib/settings/feed";
@@ -471,7 +475,7 @@ function extractMemeTitle(url: string): string {
 
 const BASE_DATE = new Date("2024-01-01").getTime();
 
-export const DEMO_ITEMS: ImageFeedItem[] = TOP_50_MEMES.map((meme, i) => {
+const DEMO_IMAGES: ImageFeedItem[] = TOP_50_MEMES.map((meme, i) => {
   const rng = seeded(i * 31337 + 1);
   const templateId = extractTemplateId(meme.url);
   const title = extractMemeTitle(meme.url) || null;
@@ -519,6 +523,49 @@ export const DEMO_ITEMS: ImageFeedItem[] = TOP_50_MEMES.map((meme, i) => {
   };
 });
 
+// CC0 clips from MDN, re-encoded (H.264 Main, faststart) so iOS plays them
+const DEMO_SCENE_CLIPS = [
+  {
+    name: "flower",
+    title: "Flower in bloom",
+    width: 640,
+    height: 360,
+    duration: 5,
+  },
+  {
+    name: "flower-portrait",
+    title: "Petals up close",
+    width: 360,
+    height: 640,
+    duration: 5,
+  },
+  { name: "friday", title: "Friday", width: 480, height: 360, duration: 6 },
+];
+
+const DEMO_SCENES: SceneFeedItem[] = DEMO_SCENE_CLIPS.map((clip, i) => {
+  const img = DEMO_IMAGES[i];
+  return {
+    ...img,
+    id: `demo-scene-${i}`,
+    type: "scene" as const,
+    title: clip.title,
+    commentCount: 0,
+    paths: {
+      stream: `/demo/${clip.name}.mp4`,
+      screenshot: null,
+      preview: null,
+    },
+    play_count: 0,
+    files: [
+      { width: clip.width, height: clip.height, duration: clip.duration },
+    ],
+  };
+});
+
+// Scenes near the top so the first page always has video
+export const DEMO_ITEMS: FeedItem[] = [...DEMO_IMAGES];
+DEMO_SCENES.forEach((scene, i) => DEMO_ITEMS.splice(1 + i * 4, 0, scene));
+
 const PER_PAGE = 20;
 
 export function demoFeedResponse(
@@ -534,6 +581,10 @@ export function demoFeedResponse(
       seed = decoded.seed;
     } catch {}
   }
+
+  // First random page mints the seed; later pages reuse it from the cursor
+  if (sort === "random" && seed === undefined)
+    seed = Math.floor(Math.random() * 2_147_483_647);
 
   let items = [...DEMO_ITEMS];
   if (sort === "rating") {
@@ -597,7 +648,7 @@ export function demoVoteResponse(body: {
 // --- SSR page helpers ---
 
 export function demoFirstPage(sort = "date"): {
-  items: ImageFeedItem[];
+  items: FeedItem[];
   count: number;
   seed?: number;
 } {
@@ -618,7 +669,7 @@ export function demoItemsFiltered(opts: {
   studioId?: string;
   performerId?: string;
   sort?: string;
-}): { items: ImageFeedItem[]; count: number } {
+}): { items: FeedItem[]; count: number } {
   let items = [...DEMO_ITEMS];
   if (opts.tagId)
     items = items.filter((i) => i.tags.some((t) => t.id === opts.tagId));
@@ -635,7 +686,7 @@ export function demoItemsFiltered(opts: {
 }
 
 export function getDemoImage(id: string): StashImage | undefined {
-  const item = DEMO_ITEMS.find((i) => i.id === id);
+  const item = DEMO_IMAGES.find((i) => i.id === id);
   if (!item) return undefined;
   return {
     id: item.id,

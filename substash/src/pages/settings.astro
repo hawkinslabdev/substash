@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { settings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { DEFAULT_TITLE_EXPR } from "@/lib/utils/media-title";
+import { getAppName } from "@/lib/settings/app-name";
 
 function getSetting(key: string): string | null {
   return db.select().from(settings).where(eq(settings.key, key)).get()?.value ?? null;
@@ -43,6 +44,7 @@ const pageNameStudios = getSetting("page_name_studios") ?? "Studios";
     pageNameTags={pageNameTags}
     pageNamePerformers={pageNamePerformers}
     pageNameStudios={pageNameStudios}
+    appName={getAppName()}
   />
 
   <BottomNav slot="nav" />

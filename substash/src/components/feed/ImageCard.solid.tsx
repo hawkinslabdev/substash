@@ -86,7 +86,7 @@ export default function ImageCard(props: Props) {
 
   return (
     <article
-      class={`feed-item flex flex-col bg-[var(--color-surface)] ${props.class ?? ""}`}
+      class={`feed-item bg-[var(--color-surface)] ${props.class ?? ""}`}
       data-stash-id={image().id}
       data-stash-type="image"
     >
@@ -259,7 +259,7 @@ export default function ImageCard(props: Props) {
       </Show>
 
       {/* Action bar */}
-      <div class="px-4 py-3 flex items-center gap-2">
+      <div class="card-actions px-4 py-3 flex items-center gap-2">
         <VoteButton
           imageId={image().id}
           initialCount={image().o_counter ?? 0}

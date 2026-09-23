@@ -15,8 +15,12 @@ interface Props {
 
 export default function VideoPlayer(props: Props) {
   let videoEl: HTMLVideoElement | undefined;
+  let wrapEl: HTMLDivElement | undefined;
   const [muted, setMuted] = createSignal(true);
   const [playing, setPlaying] = createSignal(false);
+  // iOS refuses autoplay in Low Power Mode or with Auto-Play Video Previews off,
+  // and a never-played video paints nothing there: offer a play button instead
+  const [blocked, setBlocked] = createSignal(false);
   // First real frame rendered, poster overlay can go
   const [started, setStarted] = createSignal(false);
   // A scene with no poster at all needs the stand-in too, not just one whose
@@ -27,36 +31,71 @@ export default function VideoPlayer(props: Props) {
   );
   // Scenes with no generated screenshot get a transparent pixel from the image
   // proxy, so the card's blurred backdrop is empty and portrait video sits in
-  // black bars. Grab one frame off the video itself to stand in for it.
+  // black bars. Grab one frame off a hidden copy of the video to stand in for it.
   const [frameBg, setFrameBg] = createSignal<string | null>(null);
+  // iOS paints letterbox bars black over the backdrop, so size the element to the video itself
+  const [ratio, setRatio] = createSignal<number | null>(null);
+  const [box, setBox] = createSignal<{ w: number; h: number } | null>(null);
+  const fit = () => {
+    const r = ratio();
+    const b = box();
+    if (!r || !b) return undefined;
+    return {
+      width: `${Math.min(b.w, b.h * r)}px`,
+      height: `${Math.min(b.h, b.w / r)}px`,
+    };
+  };
 
+  let grabbing = false;
   function grabFrameBackdrop() {
-    if (!videoEl || frameBg()) return;
-    const { videoWidth, videoHeight } = videoEl;
-    if (!videoWidth || !videoHeight) return;
-    try {
-      // Tiny canvas: it is blurred to mush anyway, and keeps the grab cheap
-      const canvas = document.createElement("canvas");
-      canvas.width = 48;
-      canvas.height = Math.max(1, Math.round((48 * videoHeight) / videoWidth));
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-      setFrameBg(canvas.toDataURL("image/jpeg", 0.6));
-    } catch {
-      // Cross-origin stream taints the canvas; leave the frame black
-    }
+    if (grabbing || !props.src) return;
+    grabbing = true;
+    // Drawing the visible video into a canvas makes iOS stop painting it,
+    // so read the frame from a detached copy instead
+    const copy = document.createElement("video");
+    copy.muted = true;
+    copy.playsInline = true;
+    copy.preload = "auto";
+    copy.addEventListener(
+      "loadeddata",
+      () => {
+        try {
+          // Tiny canvas: it is blurred to mush anyway, and keeps the grab cheap
+          const canvas = document.createElement("canvas");
+          canvas.width = 48;
+          canvas.height = Math.max(
+            1,
+            Math.round((48 * copy.videoHeight) / copy.videoWidth),
+          );
+          canvas
+            .getContext("2d")
+            ?.drawImage(copy, 0, 0, canvas.width, canvas.height);
+          setFrameBg(canvas.toDataURL("image/jpeg", 0.6));
+        } catch {
+          // Cross-origin stream taints the canvas; leave the frame black
+        }
+        copy.removeAttribute("src");
+        copy.load();
+      },
+      { once: true },
+    );
+    copy.src = props.src;
+    copy.load();
   }
 
   onMount(() => {
     if (!videoEl) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (entry.isIntersecting) setPreload("metadata");
         if (entry.intersectionRatio >= 0.5) {
-          videoEl!.play().catch(() => {});
+          videoEl!
+            .play()
+            .then(() => setBlocked(false))
+            .catch((e: DOMException) => {
+              if (e.name === "NotAllowedError") setBlocked(true);
+            });
           setPlaying(true);
           props.onPlay?.();
         } else {
@@ -71,6 +110,14 @@ export default function VideoPlayer(props: Props) {
     );
 
     observer.observe(videoEl);
+
+    const sizer = new ResizeObserver(([e]) =>
+      setBox({ w: e.contentRect.width, h: e.contentRect.height }),
+    );
+    sizer.observe(wrapEl!);
+    // Metadata may have landed before hydration attached onLoadedMetadata
+    if (videoEl.videoWidth && videoEl.videoHeight)
+      setRatio(videoEl.videoWidth / videoEl.videoHeight);
 
     // Stop immediately when Astro begins navigating away prevents audio overlap during view transitions and rapid multi-tap navigation
     function stopOnNavigate() {
@@ -90,6 +137,7 @@ export default function VideoPlayer(props: Props) {
 
     onCleanup(() => {
       observer.disconnect();
+      sizer.disconnect();
       document.removeEventListener("astro:before-preparation", stopOnNavigate);
     });
   });
@@ -101,7 +149,10 @@ export default function VideoPlayer(props: Props) {
   }
 
   return (
-    <div class={cn("relative", props.class)}>
+    <div
+      ref={wrapEl}
+      class={cn("relative flex items-center justify-center", props.class)}
+    >
       <video
         ref={videoEl}
         src={props.src}
@@ -110,6 +161,10 @@ export default function VideoPlayer(props: Props) {
         playsinline
         loop
         preload={preload()}
+        onLoadedMetadata={() => {
+          const { videoWidth: w, videoHeight: h } = videoEl!;
+          if (w && h) setRatio(w / h);
+        }}
         onPlaying={() => {
           setStarted(true);
           if (!posterOk()) grabFrameBackdrop();
@@ -118,6 +173,7 @@ export default function VideoPlayer(props: Props) {
           if (!posterOk()) grabFrameBackdrop();
         }}
         class="relative z-[1] w-full h-full object-contain bg-transparent"
+        style={fit()}
       />
       {/* Stand-in backdrop, only when the real poster never arrived */}
       <Show when={frameBg()}>
@@ -154,6 +210,17 @@ export default function VideoPlayer(props: Props) {
         }}
         onError={() => setPosterOk(false)}
       />
+      <Show when={blocked()}>
+        <button
+          onClick={() => videoEl?.play().then(() => setBlocked(false))}
+          aria-label="Play"
+          class="glass absolute inset-0 m-auto z-20 w-16 h-16 rounded-full flex items-center justify-center text-white active:scale-95 transition-transform"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z" />
+          </svg>
+        </button>
+      </Show>
       <button
         onClick={toggleMute}
         aria-label={muted() ? "Unmute" : "Mute"}

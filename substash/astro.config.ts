@@ -7,6 +7,7 @@ export default defineConfig({
   output: "server",
   adapter: node({ mode: "middleware" }),
   prefetch: { defaultStrategy: "hover" },
+  logger: { entrypoint: new URL("./src/lib/logger.mjs", import.meta.url) },
   integrations: [solidJs()],
   vite: {
     plugins: [tailwindcss()],

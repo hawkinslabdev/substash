@@ -26,6 +26,7 @@ const MIME = new Map([
   [".woff2", "font/woff2"],
   [".txt", "text/plain; charset=utf-8"],
   [".webmanifest", "application/manifest+json"],
+  [".mp4", "video/mp4"],
 ]);
 
 // Astro hashes all _astro/ filenames — cache forever; everything else 1 h
@@ -50,11 +51,36 @@ async function tryStatic(req, res) {
 
     const body = await readFile(file);
     const ext = path.extname(file).toLowerCase();
-    res.writeHead(200, {
+    const headers = {
       "Content-Type": MIME.get(ext) ?? "application/octet-stream",
-      "Content-Length": body.length,
       "Cache-Control": cacheControl(file),
-    });
+      "Accept-Ranges": "bytes",
+    };
+    // iOS Safari only plays video served with byte ranges
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? "");
+    if (range && (range[1] || range[2])) {
+      const size = body.length;
+      const start = range[1]
+        ? Number(range[1])
+        : Math.max(0, size - Number(range[2]));
+      const end =
+        range[1] && range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+      if (start > end || start >= size) {
+        res.writeHead(416, { "Content-Range": `bytes */${size}` });
+        res.end();
+        return true;
+      }
+      res.writeHead(206, {
+        ...headers,
+        "Content-Range": `bytes ${start}-${end}/${size}`,
+        "Content-Length": end - start + 1,
+      });
+      req.method === "HEAD"
+        ? res.end()
+        : res.end(body.subarray(start, end + 1));
+      return true;
+    }
+    res.writeHead(200, { ...headers, "Content-Length": body.length });
     req.method === "HEAD" ? res.end() : res.end(body);
     return true;
   } catch {

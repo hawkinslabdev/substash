@@ -66,10 +66,7 @@ export default function SceneCard(props: Props) {
 
   return (
     <article
-      class={cn(
-        "feed-item flex flex-col bg-[var(--color-surface)]",
-        props.class,
-      )}
+      class={cn("feed-item bg-[var(--color-surface)]", props.class)}
       data-stash-id={scene().id}
       data-stash-type="scene"
     >
@@ -222,7 +219,7 @@ export default function SceneCard(props: Props) {
       </Show>
 
       {/* Action bar */}
-      <div class="px-4 py-3 flex items-center gap-2">
+      <div class="card-actions px-4 py-3 flex items-center gap-2">
         <VoteButton
           sceneId={scene().id}
           initialCount={scene().o_counter ?? 0}

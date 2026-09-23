@@ -7,6 +7,7 @@ import { settings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { formatOriginDisplay } from "@/lib/utils/subreddit";
 import { getFeedSettings } from "@/lib/settings/feed";
+import { getAppName } from "@/lib/settings/app-name";
 
 function getSetting(key: string, fallback: string): string {
   return db.select().from(settings).where(eq(settings.key, key)).get()?.value ?? fallback;
@@ -29,19 +30,16 @@ const browseLinks = [
   {
     href: "/tags",
     label: pageNameTags,
-    desc: `Browse all ${pageNameTags.toLowerCase()}`,
     svg: `<path stroke-linecap="round" stroke-linejoin="round" d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line stroke-linecap="round" x1="7" y1="7" x2="7.01" y2="7"/>`,
   },
   {
     href: "/performers",
     label: pageNamePerformers,
-    desc: `Browse ${pageNamePerformers.toLowerCase()}`,
     svg: `<path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>`,
   },
   {
     href: "/studios",
     label: pageNameStudios,
-    desc: `Browse ${pageNameStudios.toLowerCase()}`,
     svg: `<rect x="2" y="3" width="20" height="14" rx="2"/><path stroke-linecap="round" d="M8 21h8M12 17v4"/>`,
   },
   {
@@ -83,7 +81,7 @@ const browseLinks = [
             type="text"
             name="q"
             value={q}
-            placeholder="Search Substash…"
+            placeholder={`Search ${getAppName()}…`}
             autocomplete="off"
             class="w-full h-9 pl-9 pr-4 rounded-control border border-[var(--color-border)] bg-[var(--color-surface-3)] text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]/50 transition-colors"
           />

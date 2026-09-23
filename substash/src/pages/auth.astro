@@ -1,5 +1,7 @@
 ---
 import "@/styles/global.css";
+import { getAppName } from "@/lib/settings/app-name";
+const appName = getAppName();
 const from = Astro.url.searchParams.get("from") ?? "/";
 ---
 
@@ -9,7 +11,7 @@ const from = Astro.url.searchParams.get("from") ?? "/";
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0d0d0d" />
-    <title>Substash: Unlock</title>
+    <title>{`${appName}: Unlock`}</title>
     <script is:inline>
       (function () {
         const accent = localStorage.getItem('substash:accent');
@@ -234,7 +236,7 @@ const from = Astro.url.searchParams.get("from") ?? "/";
           <img src="/logo.svg" alt="" width="32" height="32" />
         </div>
         <h1>Welcome back</h1>
-        <p class="sub">Enter your PIN to unlock Substash.</p>
+        <p class="sub">Enter your PIN to unlock {appName}.</p>
       </section>
 
       <section class="entry">

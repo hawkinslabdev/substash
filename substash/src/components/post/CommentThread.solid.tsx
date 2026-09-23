@@ -38,7 +38,7 @@ export default function CommentThread(props: Props) {
       showToast("Comment deleted");
       props.onRefetch?.();
     } else {
-      showToast("Failed to delete comment", 3000, "error");
+      showToast("Failed to delete comment", undefined, "error");
     }
     setConfirmingDelete(null);
   }

@@ -3,6 +3,7 @@ import "@/styles/global.css";
 import { ClientRouter } from "astro:transitions";
 import Toast from "@/components/ui/Toast.solid";
 import TopHeader from "@/components/layout/TopHeader.astro";
+import { getAppName, DEFAULT_APP_NAME } from "@/lib/settings/app-name";
 
 interface Props {
   title?: string;
@@ -12,12 +13,15 @@ interface Props {
   preloadAs?: "video" | "image";
 }
 
+const appName = getAppName();
 const {
-  title = "Substash",
+  title = appName,
   description = "Your personal media feed",
   preloadUrl,
   preloadAs,
 } = Astro.props;
+// Pages write titles with the default brand; swap in the configured name here
+const pageTitle = title.replaceAll(DEFAULT_APP_NAME, appName);
 ---
 
 <!doctype html>
@@ -30,7 +34,8 @@ const {
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>{title}</title>
+    <meta name="apple-mobile-web-app-title" content={appName} />
+    <title>{pageTitle}</title>
     {preloadUrl && <link rel="preload" href={preloadUrl} as={preloadAs ?? "video"} />}
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="preconnect" href="https://rsms.me" crossorigin />

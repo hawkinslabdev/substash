@@ -12,6 +12,7 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/solid-query";
+import { navigate } from "astro:transitions/client";
 import VideoPlayer from "./VideoPlayer.solid";
 import MediaActionRail from "./MediaActionRail.solid";
 import { fetchPage, type PageResult } from "./Feed.solid";
@@ -259,6 +260,18 @@ function ImmersiveInner(props: Props) {
 
   const fkey = filterKey(props);
 
+  // Random feed reshuffles in place; a sorted feed switches to random, filters kept
+  function shuffle() {
+    if ((props.sort ?? "random") === "random") {
+      setRefreshing(true);
+      setRefreshKey((k) => k + 1);
+      return;
+    }
+    const url = new URL(location.href);
+    url.searchParams.set("sort", "random");
+    navigate(url.pathname + url.search);
+  }
+
   // Read before any effect runs, the index effect below would overwrite it
   const cached = loadCache(props.sort, fkey);
   const savedIndex = cached ? loadIndex(props.sort, fkey) : 0;
@@ -400,11 +413,87 @@ function ImmersiveInner(props: Props) {
     }
     document.addEventListener("keydown", onKeydown);
 
-    // Pull-to-refresh at the first item
-    function onTouchStart(e: TouchEvent) {
-      touchStartY = (container?.scrollTop ?? 1) < 2 ? e.touches[0].clientY : 0;
+    // iOS mandatory snap can stall mid-swipe, so touch drives scrollTop and always lands on one item
+    let drag: {
+      y: number;
+      top: number;
+      lastY: number;
+      lastT: number;
+      v: number;
+    } | null = null;
+    let glide = 0;
+
+    function glideTo(target: number, velocity: number) {
+      if (!container) return;
+      const el = container;
+      const from = el.scrollTop;
+      const dist = Math.abs(target - from);
+      const ms = matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? 1
+        : Math.min(
+            460,
+            Math.max(220, dist / Math.max(Math.abs(velocity), 1.2) + 160),
+          );
+      const t0 = performance.now();
+      const ease = (p: number) =>
+        (1 - Math.pow(2, -10 * p)) / (1 - Math.pow(2, -10));
+      const step = (now: number) => {
+        const p = Math.min(1, (now - t0) / ms);
+        el.scrollTop = from + (target - from) * ease(p);
+        if (p < 1) glide = requestAnimationFrame(step);
+        else el.style.scrollSnapType = "";
+      };
+      cancelAnimationFrame(glide);
+      glide = requestAnimationFrame(step);
     }
+
+    function onTouchStart(e: TouchEvent) {
+      if (!container || e.touches.length > 1) return;
+      cancelAnimationFrame(glide);
+      // Native snap would fight every scrollTop write below
+      container.style.scrollSnapType = "none";
+      const y = e.touches[0].clientY;
+      drag = {
+        y,
+        top: container.scrollTop,
+        lastY: y,
+        lastT: e.timeStamp,
+        v: 0,
+      };
+      // Pull-to-refresh arms only from the first item
+      touchStartY = container.scrollTop < 2 ? y : 0;
+    }
+    function onTouchMove(e: TouchEvent) {
+      if (!drag || !container) return;
+      const y = e.touches[0].clientY;
+      const dt = e.timeStamp - drag.lastT;
+      // Smoothed px/ms, positive when moving toward the next item
+      if (dt > 0) drag.v = 0.7 * ((drag.lastY - y) / dt) + 0.3 * drag.v;
+      drag.lastY = y;
+      drag.lastT = e.timeStamp;
+      container.scrollTop = drag.top + (drag.y - y);
+    }
+    function settleDrag() {
+      if (!drag || !container) return;
+      const h = container.clientHeight;
+      const last = Math.max(0, Math.round((container.scrollHeight - h) / h));
+      const start = Math.round(drag.top / h);
+      const moved = container.scrollTop - drag.top;
+      // A finger that paused before lifting carries no flick
+      const v = performance.now() - drag.lastT > 100 ? 0 : drag.v;
+      const dir =
+        Math.abs(v) > 0.3
+          ? Math.sign(v)
+          : Math.abs(moved) > h * 0.2
+            ? Math.sign(moved)
+            : 0;
+      const target = Math.min(last, Math.max(0, start + dir));
+      glideTo(target * h, v);
+      drag = null;
+    }
+
     function onTouchEnd(e: TouchEvent) {
+      settleDrag();
       if (touchStartY === 0 || refreshing()) return;
       const delta = e.changedTouches[0].clientY - touchStartY;
       if (delta > 90 && (container?.scrollTop ?? 1) < 2) {
@@ -414,12 +503,25 @@ function ImmersiveInner(props: Props) {
       touchStartY = 0;
     }
     container?.addEventListener("touchstart", onTouchStart, { passive: true });
+    container?.addEventListener("touchmove", onTouchMove, { passive: true });
     container?.addEventListener("touchend", onTouchEnd, { passive: true });
+    container?.addEventListener("touchcancel", settleDrag, { passive: true });
+
+    // Re-tapping Discover in the nav reshuffles instead of scrolling to top
+    function onReselect(e: Event) {
+      e.preventDefault();
+      shuffle();
+    }
+    document.addEventListener("nav:reselect", onReselect);
 
     onCleanup(() => {
       document.removeEventListener("keydown", onKeydown);
       container?.removeEventListener("touchstart", onTouchStart);
+      container?.removeEventListener("touchmove", onTouchMove);
       container?.removeEventListener("touchend", onTouchEnd);
+      container?.removeEventListener("touchcancel", settleDrag);
+      document.removeEventListener("nav:reselect", onReselect);
+      cancelAnimationFrame(glide);
       observer?.disconnect();
     });
   });
@@ -492,6 +594,29 @@ function ImmersiveInner(props: Props) {
             />
           </svg>
           <p class="text-sm font-medium">You've seen it all</p>
+          <button
+            onClick={shuffle}
+            class="mt-2 inline-flex items-center gap-2 px-4 min-h-[44px] rounded-full text-sm font-medium text-white bg-[var(--color-accent)] active:scale-95 transition-transform"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="16 3 21 3 21 8" />
+              <line x1="4" y1="20" x2="21" y2="3" />
+              <polyline points="21 16 21 21 16 21" />
+              <line x1="15" y1="15" x2="21" y2="21" />
+              <line x1="4" y1="4" x2="9" y2="9" />
+            </svg>
+            Shuffle
+          </button>
         </section>
       </Show>
     </div>

@@ -61,7 +61,7 @@ export default function CommentSection(props: Props) {
 
   return (
     <section class="px-4 pb-6 space-y-3">
-      <h2 class="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide pt-4">
+      <h2 class="text-sm font-semibold text-[var(--color-text)] pt-4">
         Comments
       </h2>
       <Show when={!comments.loading} fallback={<CommentSkeleton />}>

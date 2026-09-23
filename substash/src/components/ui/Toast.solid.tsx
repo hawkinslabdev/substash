@@ -33,6 +33,7 @@ export default function Toast() {
 
   return (
     <div
+      role="status"
       class="fixed inset-x-4 z-[100] flex justify-center pointer-events-none transition-all duration-200"
       style={{
         bottom: `max(calc(env(safe-area-inset-bottom, 0px) + 100px), 108px)`,

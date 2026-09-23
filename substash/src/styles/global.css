@@ -183,6 +183,15 @@
     border-radius: var(--radius-card);
     overflow: hidden;
   }
+  .feed-item .card-actions {
+    padding-inline: 8px;
+  }
+  .feed-item .card-actions > *,
+  .feed-item .card-actions > * > button {
+    flex: 1;
+    justify-content: center;
+    min-height: 44px;
+  }
 }
 
 /* Immersive vertical pager (Discover) — one media item per viewport */
@@ -194,8 +203,9 @@
   scroll-snap-type: y mandatory;
   overscroll-behavior-y: contain;
   background: black;
-  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  /* Touch paging is driven in ImmersiveFeed; wheel and keyboard stay native */
+  touch-action: none;
 }
 .immersive-container::-webkit-scrollbar {
   display: none;
@@ -276,7 +286,6 @@
   font-style: italic;
 }
 .md-body code {
-  font-family: ui-monospace, monospace;
   font-size: 0.8em;
   background: var(--color-surface-2);
   border: 1px solid var(--color-border);
@@ -341,7 +350,6 @@
   margin: 0.3em 0;
 }
 .rich-editor code {
-  font-family: ui-monospace, monospace;
   font-size: 0.82em;
   background: var(--color-surface-2);
   border: 1px solid var(--color-border);

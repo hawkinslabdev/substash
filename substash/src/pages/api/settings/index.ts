@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { invalidateTitleExprCache } from "@/lib/settings/media-title";
 import { invalidateFeedSettingsCache } from "@/lib/settings/feed";
 import { DEFAULT_TITLE_EXPR } from "@/lib/utils/media-title";
+import { DEFAULT_APP_NAME } from "@/lib/settings/app-name";
 
 function getSetting(key: string): string | null {
   const row = db.select().from(settings).where(eq(settings.key, key)).get();
@@ -28,7 +29,9 @@ export const GET: APIRoute = () => {
   const pageNameTags = getSetting("page_name_tags") ?? "Tags";
   const pageNamePerformers = getSetting("page_name_performers") ?? "Creators";
   const pageNameStudios = getSetting("page_name_studios") ?? "Studios";
+  const appName = getSetting("app_name") ?? DEFAULT_APP_NAME;
   return Response.json({
+    appName,
     pinEnabled,
     sessionHours,
     shareEnabled,
@@ -72,6 +75,9 @@ export const POST: APIRoute = async ({ request }) => {
   }
   if (typeof body.pageNameStudios === "string") {
     upsert("page_name_studios", body.pageNameStudios.trim() || "Studios");
+  }
+  if (typeof body.appName === "string") {
+    upsert("app_name", body.appName.trim().slice(0, 40) || DEFAULT_APP_NAME);
   }
   return Response.json({ ok: true });
 };

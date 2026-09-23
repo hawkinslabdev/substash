@@ -1,5 +1,6 @@
 import { createSignal, createMemo, Show, For } from "solid-js";
 import { resetShareCache } from "@/lib/utils/share";
+import { showToast } from "@/lib/utils/toast";
 import {
   validateTitleExpr,
   evalTitleExpr,
@@ -27,6 +28,7 @@ interface Props {
   pageNameTags: string;
   pageNamePerformers: string;
   pageNameStudios: string;
+  appName: string;
 }
 
 export default function Settings(props: Props) {
@@ -38,7 +40,6 @@ export default function Settings(props: Props) {
   const [pinBoxes, setPinBoxes] = createSignal(["", "", "", "", "", ""]);
   const [pinError, setPinError] = createSignal("");
   const [pinLoading, setPinLoading] = createSignal(false);
-  const [toast, setToast] = createSignal("");
 
   const [accentTheme, setAccentThemeSignal] = createSignal(
     localStorage.getItem("substash:accent") ?? "reddit",
@@ -120,13 +121,16 @@ export default function Settings(props: Props) {
   const [pageNameStudios, setPageNameStudios] = createSignal(
     props.pageNameStudios,
   );
+  const [appName, setAppName] = createSignal(props.appName);
   const [savedPageNames, setSavedPageNames] = createSignal({
+    app: props.appName,
     tags: props.pageNameTags,
     performers: props.pageNamePerformers,
     studios: props.pageNameStudios,
   });
   const pageNamesDirty = createMemo(
     () =>
+      appName() !== savedPageNames().app ||
       pageNameTags() !== savedPageNames().tags ||
       pageNamePerformers() !== savedPageNames().performers ||
       pageNameStudios() !== savedPageNames().studios,
@@ -141,17 +145,19 @@ export default function Settings(props: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          appName: appName(),
           pageNameTags: pageNameTags(),
           pageNamePerformers: pageNamePerformers(),
           pageNameStudios: pageNameStudios(),
         }),
       });
       setSavedPageNames({
+        app: appName(),
         tags: pageNameTags(),
         performers: pageNamePerformers(),
         studios: pageNameStudios(),
       });
-      showToast("Page names saved.");
+      showToast("Names saved.");
       setTimeout(() => window.location.reload(), 800);
     } catch {
       showToast("Failed to save.");
@@ -246,11 +252,6 @@ export default function Settings(props: Props) {
     setTitleExpr(DEFAULT_TITLE_EXPR);
   }
 
-  function showToast(msg: string) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 2500);
-  }
-
   const [runningTask, setRunningTask] = createSignal<string | null>(null);
 
   async function runTask(task: "scan" | "autotag" | "generate", label: string) {
@@ -264,7 +265,7 @@ export default function Settings(props: Props) {
       if (!res.ok) throw new Error(await res.text());
       showToast(`${label} started in Stash.`);
     } catch {
-      showToast(`Failed to start ${label.toLowerCase()}.`);
+      showToast(`Failed to start ${label.toLowerCase()}.`, undefined, "error");
     } finally {
       setRunningTask(null);
     }
@@ -373,12 +374,6 @@ export default function Settings(props: Props) {
 
   return (
     <div class="pb-16">
-      <Show when={toast()}>
-        <div class="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-control text-sm text-[var(--color-text)] shadow-lg pointer-events-none">
-          {toast()}
-        </div>
-      </Show>
-
       {/* SECURITY */}
       <SectionLabel>Security</SectionLabel>
       <div class="border-t border-b border-[var(--color-border)] divide-y divide-[var(--color-border)]">
@@ -479,7 +474,7 @@ export default function Settings(props: Props) {
                 value={pinBoxes()[i]}
                 onInput={(e) => updateBox(i, e.currentTarget.value)}
                 onKeyDown={(e) => handleBoxKeyDown(e, i)}
-                class="w-11 h-13 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-control text-center text-lg font-semibold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] uppercase caret-[var(--color-accent)] transition-colors"
+                class="w-11 h-13 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-control text-center text-lg font-semibold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] caret-[var(--color-accent)] transition-colors"
               />
             ))}
           </div>
@@ -681,14 +676,14 @@ export default function Settings(props: Props) {
                 rows={6}
                 spellcheck={false}
                 autocomplete="off"
-                class={`w-full font-mono text-sm bg-[var(--color-surface-3)] border rounded-control px-3 py-2.5 text-[var(--color-text)] focus:outline-none transition-colors resize-y leading-relaxed ${
+                class={`w-full text-sm bg-[var(--color-surface-3)] border rounded-control px-3 py-2.5 text-[var(--color-text)] focus:outline-none transition-colors resize-y leading-relaxed ${
                   titleExprValidation().ok
                     ? "border-[var(--color-border)] focus:border-[var(--color-accent)]"
                     : "border-red-500/60 focus:border-red-500"
                 }`}
               />
               <Show when={!titleExprValidation().ok}>
-                <p class="mt-1.5 text-xs text-red-400 font-mono leading-snug">
+                <p class="mt-1.5 text-xs text-red-400 leading-snug">
                   {!titleExprValidation().ok &&
                     (titleExprValidation() as { ok: false; error: string })
                       .error}
@@ -698,12 +693,12 @@ export default function Settings(props: Props) {
 
             {/* Sample data + live variable inspector */}
             <div class="space-y-3">
-              <p class="text-[11px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
+              <p class="text-xs font-semibold text-[var(--color-text-muted)]">
                 Preview
               </p>
 
               {/* Editable inputs for Stash API fields */}
-              <p class="text-[10px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
+              <p class="text-xs font-semibold text-[var(--color-text-muted)]">
                 Stash fields
               </p>
               <div class="grid grid-cols-2 gap-2">
@@ -733,7 +728,7 @@ export default function Settings(props: Props) {
                   ] as [string, () => string, (v: string) => void, string][]
                 ).map(([name, get, set, ph]) => (
                   <div>
-                    <label class="text-[10px] font-mono text-[var(--color-text-muted)] mb-1 block">
+                    <label class="text-[11px] text-[var(--color-text-muted)] mb-1 block">
                       {name}
                     </label>
                     <input
@@ -741,14 +736,14 @@ export default function Settings(props: Props) {
                       value={get()}
                       onInput={(e) => set(e.currentTarget.value)}
                       placeholder={ph}
-                      class="w-full font-mono text-xs bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-inner px-2.5 py-1.5 text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                      class="w-full text-xs bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-inner px-2.5 py-1.5 text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
                     />
                   </div>
                 ))}
               </div>
 
               {/* Parsed fields (R/O)*/}
-              <p class="text-[10px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase pt-1">
+              <p class="text-xs font-semibold text-[var(--color-text-muted)] pt-1">
                 Parsed from title
               </p>
               <div class="grid grid-cols-2 gap-1.5">
@@ -766,10 +761,10 @@ export default function Settings(props: Props) {
                 >
                   {([name, val]) => (
                     <div class="px-2.5 py-1.5 bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-inner min-w-0">
-                      <p class="text-[9px] font-mono text-[var(--color-text-muted)] mb-0.5 tracking-wide">
+                      <p class="text-[10px] text-[var(--color-text-muted)] mb-0.5">
                         {name}
                       </p>
-                      <p class="text-[11px] font-mono text-[var(--color-text)] truncate">
+                      <p class="text-[11px] text-[var(--color-text)] truncate">
                         {val ?? <span class="opacity-30 italic">null</span>}
                       </p>
                     </div>
@@ -778,7 +773,7 @@ export default function Settings(props: Props) {
               </div>
 
               {/* Expression output */}
-              <p class="text-[10px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase pt-1">
+              <p class="text-xs font-semibold text-[var(--color-text-muted)] pt-1">
                 Expression output
               </p>
               <Show
@@ -803,10 +798,10 @@ export default function Settings(props: Props) {
                   >
                     {([name, val]) => (
                       <div class="px-2.5 py-1.5 bg-[var(--color-surface-3)] border border-[var(--color-accent)]/30 rounded-inner min-w-0">
-                        <p class="text-[9px] font-mono text-[var(--color-text-muted)] mb-0.5 tracking-wide">
+                        <p class="text-[10px] text-[var(--color-text-muted)] mb-0.5">
                           {name}
                         </p>
-                        <p class="text-[11px] font-mono text-[var(--color-text)] truncate">
+                        <p class="text-[11px] text-[var(--color-text)] truncate">
                           {val ?? <span class="opacity-30 italic">null</span>}
                         </p>
                       </div>
@@ -851,9 +846,11 @@ export default function Settings(props: Props) {
             class="w-full flex items-center justify-between px-4 min-h-[56px] gap-4 hover:bg-[var(--color-surface-2)] transition-colors active:scale-[0.99]"
           >
             <div class="min-w-0 text-left">
-              <p class="text-sm text-[var(--color-text)]">Page names</p>
+              <p class="text-sm text-[var(--color-text)]">Names</p>
               <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
-                Custom labels for Tags, Performers, and Studios pages
+                Rename the app and the {savedPageNames().tags},{" "}
+                {savedPageNames().performers}, and {savedPageNames().studios}{" "}
+                pages
               </p>
             </div>
             <svg
@@ -877,6 +874,7 @@ export default function Settings(props: Props) {
             <div class="px-4 pb-5 space-y-4 border-t border-[var(--color-border)] pt-4">
               {(
                 [
+                  ["App name", appName, setAppName, "Substash"],
                   ["Tags page", pageNameTags, setPageNameTags, "Tags"],
                   [
                     "Performers page",
@@ -959,7 +957,7 @@ export default function Settings(props: Props) {
           />
           <div class="flex items-center shrink-0 gap-0 rounded-control overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-3)]">
             <Show when={feedShowPrefix()}>
-              <span class="pl-3 pr-1 text-sm font-mono text-[var(--color-text-muted)] select-none">
+              <span class="pl-3 pr-1 text-sm text-[var(--color-text-muted)] select-none">
                 r/
               </span>
             </Show>
@@ -1008,7 +1006,7 @@ export default function Settings(props: Props) {
         <Row>
           <RowLabel
             title="Auto-tag"
-            sub="Match performers, studios, and tags from filenames"
+            sub={`Match ${savedPageNames().performers.toLowerCase()}, ${savedPageNames().studios.toLowerCase()}, and ${savedPageNames().tags.toLowerCase()} from filenames`}
           />
           <PillButton
             onClick={() => runTask("autotag", "Auto-tag")}
@@ -1036,46 +1034,31 @@ export default function Settings(props: Props) {
       </div>
 
       {/* ABOUT */}
-      <SectionLabel>About</SectionLabel>
-      <div class="border-t border-b border-[var(--color-border)]">
+      <footer class="flex items-center justify-center gap-2 px-4 pt-12 pb-6 text-xs text-[var(--color-text-muted)]">
+        <span>
+          Substash
+          {import.meta.env.VITE_APP_VERSION &&
+            ` ${import.meta.env.VITE_APP_VERSION}`}
+        </span>
+        <span aria-hidden="true">·</span>
         <a
           href="https://github.com/hawkinslabdev/substash"
           target="_blank"
           rel="noopener noreferrer"
-          class="flex items-center justify-between px-4 min-h-[52px] gap-4 hover:bg-[var(--color-surface-2)] transition-colors"
+          class="inline-flex items-center gap-1.5 min-h-[44px] hover:text-[var(--color-text)] transition-colors"
         >
-          <div class="flex items-center gap-3">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              class="text-[var(--color-text-muted)] shrink-0"
-            >
-              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
-            </svg>
-            <p class="text-sm text-[var(--color-text)]">Source code</p>
-          </div>
-          <div class="flex items-center gap-1.5 shrink-0">
-            <span class="text-xs text-[var(--color-text-muted)]">substash</span>
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              class="text-[var(--color-text-muted)]"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="m9 18 6-6-6-6"
-              />
-            </svg>
-          </div>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+          </svg>
+          Source code
         </a>
-      </div>
+      </footer>
     </div>
   );
 }
@@ -1083,7 +1066,7 @@ export default function Settings(props: Props) {
 function SectionLabel(props: { children: string }) {
   return (
     <div class="px-4 pt-10 pb-2.5">
-      <p class="text-[10px] font-bold tracking-widest text-[var(--color-text-muted)] uppercase">
+      <p class="text-sm font-semibold text-[var(--color-text)]">
         {props.children}
       </p>
     </div>
