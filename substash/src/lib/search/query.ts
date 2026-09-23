@@ -2,7 +2,13 @@ import { rawDb } from "@/lib/db";
 import type { FeedItem } from "@/lib/stash/feed-item";
 
 export type FilterType =
-  "all" | "scenes" | "images" | "tags" | "performers" | "studios" | "comments";
+  | "all"
+  | "scenes"
+  | "images"
+  | "tags"
+  | "performers"
+  | "studios"
+  | "comments";
 
 export interface SearchResult {
   items: FeedItem[];
@@ -247,9 +253,10 @@ export function searchComments(q: string, page: number): CommentSearchResult {
     .all(pattern, PER_PAGE + 1, offset);
 
   const countRow = rawDb
-    .prepare<[string], { n: number }>(
-      `SELECT COUNT(*) as n FROM comments WHERE body LIKE ? ESCAPE '\\'`,
-    )
+    .prepare<
+      [string],
+      { n: number }
+    >(`SELECT COUNT(*) as n FROM comments WHERE body LIKE ? ESCAPE '\\'`)
     .get(pattern);
 
   const hasMore = rows.length > PER_PAGE;
