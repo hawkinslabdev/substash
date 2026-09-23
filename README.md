@@ -1,6 +1,7 @@
 # <img src=".github/assets/logo.svg" style="height: 1em; vertical-align: middle;"> Substash
 
 [![License](https://img.shields.io/badge/license-AGPL%203.0-blue)](LICENSE)
+[![AI Assisted](https://img.shields.io/badge/AI-Assisted-purple)](LICENSE)
 
 Substash is a mobile-first, single-user web application that acts as a Reddit-esque frontend that'll allow you to consume media from [Stash](https://github.com/stashapp/stash/). Perfect for your personal meme-collections or for your personal media library, offering a familiar way to browse and enjoy your saved content on the go.
 
