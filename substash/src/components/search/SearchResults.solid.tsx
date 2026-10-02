@@ -26,13 +26,7 @@ import { proxyImage } from "@/lib/stash/image";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type FilterType =
-  | "all"
-  | "scenes"
-  | "images"
-  | "tags"
-  | "performers"
-  | "studios"
-  | "comments";
+  "all" | "scenes" | "images" | "tags" | "performers" | "studios" | "comments";
 
 interface EntityResult {
   stashId: string;
