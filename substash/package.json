@@ -28,7 +28,7 @@
     "drizzle-orm": "^0.45.3",
     "graphql": "^16.14.2",
     "graphql-request": "^7.4.0",
-    "solid-js": "^1.9.15",
+    "solid-js": "^1.9.17",
     "solid-motionone": "^1.0.4",
     "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.2.4",
@@ -37,7 +37,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@emnapi/runtime": "^1.11.3",
-    "@graphql-codegen/cli": "^7.4.3",
+    "@graphql-codegen/cli": "^7.4.6",
     "@graphql-codegen/typescript": "^6.1.0",
     "@graphql-codegen/typescript-operations": "^6.1.9",
     "@types/better-sqlite3": "^7.6.13",
