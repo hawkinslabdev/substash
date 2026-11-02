@@ -102,8 +102,8 @@ const cursorPayload = { page: 1, perPage: 20, total: count, sort, tagId: slug };
     </div>
   ) : (
     <>
-      <header class="header-glass sticky top-0 z-10 px-4 py-3 flex items-center gap-3">
-        <a href="/tags" class="text-[var(--color-text-muted)]">
+      <header class="header-glass sticky top-0 z-10 px-5 py-4 flex items-center gap-3">
+        <a href="/tags" class="page-back text-[var(--color-text-muted)]">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
           </svg>
@@ -117,7 +117,7 @@ const cursorPayload = { page: 1, perPage: 20, total: count, sort, tagId: slug };
             class="w-8 h-8 rounded-full flex-shrink-0"
           />
         )}
-        <h1 class="text-base font-semibold truncate">{displayName}</h1>
+        <h1 class="page-title text-base font-semibold truncate">{displayName}</h1>
         <a
           href={`/discover?tag=${slug}`}
           aria-label="Play as feed"

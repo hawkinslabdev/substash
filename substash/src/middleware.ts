@@ -20,9 +20,8 @@ const PAGE_BYPASS = [
   "/favicon",
 ];
 
-// Media streaming; browsers send range requests that don't reliably carry cookies;
-// stream content is only meaningful if you already know the internal scene ID.
-const API_BYPASS = ["/api/auth/", "/api/stash/stream/"];
+// Stream stays gated: same-origin <video> range requests carry the SameSite=Lax cookie
+const API_BYPASS = ["/api/auth/"];
 
 function unauth401() {
   return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -37,13 +36,23 @@ function getSetting(key: string): string | null {
   );
 }
 
-async function isValidShareKey(shareKey: string): Promise<boolean> {
+// A share key unlocks only its own page and, for scenes, that scene's stream
+async function isValidShareKey(
+  shareKey: string,
+  pathname: string,
+): Promise<boolean> {
+  if (getSetting("share_enabled") !== "true") return false;
   const row = db
     .select()
     .from(shareLinks)
     .where(eq(shareLinks.token, shareKey))
     .get();
   if (!row) return false;
+  const allowed =
+    pathname === row.originalPath ||
+    (row.mediaType === "scene" &&
+      pathname === `/api/stash/stream/${row.stashId}`);
+  if (!allowed) return false;
   const shareSecret = import.meta.env.SHARE_SECRET ?? "substash-default-secret";
   const expected = await hmacSha256hex(
     `${row.stashId}${row.mediaType}`,
@@ -75,9 +84,8 @@ const authGate = defineMiddleware(
     if (API_BYPASS.some((p) => pathname.startsWith(p))) return next();
     if (PAGE_BYPASS.some((p) => pathname.startsWith(p))) return next();
 
-    // Valid share key grants access to the target page
     const shareKey = searchParams.get("shareKey");
-    if (shareKey && (await isValidShareKey(shareKey))) return next();
+    if (shareKey && (await isValidShareKey(shareKey, pathname))) return next();
 
     // Validate session cookie
     const token = cookies.get(SESSION_COOKIE)?.value;

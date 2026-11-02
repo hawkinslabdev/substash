@@ -16,7 +16,7 @@
   --radius-control: 12px;
   --radius-inner: 8px;
   --bottom-nav-height: 56px;
-  --header-height: 48px;
+  --header-height: 56px;
   /* Liquid Glass material — floating chrome only (nav, headers, overlays, sheets) */
   --glass-bg: color-mix(in srgb, var(--color-surface-2) 72%, transparent);
   --glass-bg-strong: color-mix(
@@ -28,7 +28,6 @@
   --glass-blur: 20px;
   /* Motion tokens */
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --dur-press: 80ms;
   --dur-transition: 250ms;
   --dur-sheet: 320ms;
@@ -112,15 +111,14 @@
    media overlays, sheets). Never on content cards. Max 2 layers per screen. */
 .glass {
   background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
 }
 .glass-strong {
   background: var(--glass-bg-strong);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border-top: 1px solid var(--glass-border);
 }
 @supports not (
   (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
@@ -158,6 +156,44 @@
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: var(--color-surface);
+  }
+}
+
+/* Desktop: page headers become a static title row (big title, round back button).
+   Mobile keeps the sticky translucent bar above. */
+@media (min-width: 1024px) {
+  .header-glass {
+    position: static;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-bottom: 0;
+    padding: 8px 16px 20px;
+  }
+  /* Some headers (performer) wrap their row in a padded div */
+  .header-glass > div {
+    padding: 0;
+  }
+  .header-glass .page-title {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--color-text);
+  }
+  .header-glass .page-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 9999px;
+    margin-left: -10px; /* chevron lines up with the content edge */
+    transition: background-color 150ms var(--ease-out-quart);
+  }
+  .header-glass .page-back:hover {
+    background-color: var(--color-surface-3);
+    color: var(--color-text);
   }
 }
 
@@ -429,7 +465,7 @@
   }
 }
 .vote-pop {
-  animation: vote-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: vote-pop 380ms var(--ease-out-quart);
 }
 
 /* Double-tap-to-like center heart */
@@ -579,6 +615,32 @@
 }
 .refresh-success {
   animation: refresh-success 650ms ease-out forwards;
+}
+
+/* Compact feed: title and meta left, small media right (toggle in SortBar) */
+:root[data-feed-density="compact"] .feed-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px;
+  align-content: start;
+}
+:root[data-feed-density="compact"] .feed-item > * {
+  grid-column: 1;
+}
+:root[data-feed-density="compact"] .feed-item > .media-frame {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  align-self: start;
+  width: auto;
+  margin: 12px 16px 12px 0;
+  aspect-ratio: 16 / 9 !important; /* beats the inline per-item ratio */
+  border-radius: var(--radius-inner);
+}
+:root[data-feed-density="compact"] .feed-item .media-overlay {
+  display: none;
+}
+:root[data-feed-density="compact"] .feed-item .card-actions {
+  padding-top: 8px;
+  padding-bottom: 12px;
 }
 
 /* Desktop layout: persistent header + collapsible sidebar */

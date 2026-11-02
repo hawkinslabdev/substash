@@ -33,10 +33,15 @@ if (DEMO_MODE) {
 ---
 
 <PageShell title={`Substash: ${pageName}`}>
-  <header class="header-glass sticky top-0 z-10 px-4 py-3">
-    <h1 class="text-base font-semibold">
+  <header class="header-glass sticky top-0 z-10 px-5 py-4 flex items-center gap-3">
+    <button onclick="history.back()" aria-label="Go back" class="page-back hidden lg:flex text-[var(--color-text-muted)]">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
+      </svg>
+    </button>
+    <h1 class="page-title text-base font-semibold">
       <img
-        src="/logo.svg" alt="" class="inline w-5 h-5 mr-1 -mt-0.5"
+        src="/logo.svg" alt="" class="inline lg:hidden w-5 h-5 mr-1 -mt-0.5"
         />
       {pageName}
     </h1>

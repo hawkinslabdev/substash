@@ -339,17 +339,9 @@ const queryClient = new QueryClient({
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
-interface BrowseLink {
-  href: string;
-  label: string;
-  desc?: string;
-  svg: string;
-}
-
 interface Props {
   initialQ?: string;
   initialFilter?: string;
-  browseLinks: BrowseLink[];
   pageNameTags?: string;
   pageNamePerformers?: string;
   pageNameStudios?: string;
@@ -621,7 +613,7 @@ function SearchResultsInner(props: Props) {
         when={isSubredditMode()}
         fallback={
           <Show when={q().length >= MIN_Q}>
-            <div class="sticky top-[57px] lg:top-0 z-10 bg-[var(--color-surface)]/95 backdrop-blur border-b border-[var(--color-border)]">
+            <div class="sticky top-[65px] lg:top-0 z-10 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
               <div class="flex items-center gap-1.5 px-4 py-2.5 overflow-x-auto scrollbar-hide">
                 <For each={tabs()}>
                   {(tab) => (
@@ -647,7 +639,7 @@ function SearchResultsInner(props: Props) {
           </Show>
         }
       >
-        <div class="sticky top-[57px] lg:top-0 z-10 bg-[var(--color-surface)]/95 backdrop-blur border-b border-[var(--color-border)]">
+        <div class="sticky top-[65px] lg:top-0 z-10 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
           {/* Filter indicator row */}
           <div class="flex items-center gap-2 px-4 pt-3.5 pb-1.5">
             <svg
@@ -908,12 +900,12 @@ function SearchResultsInner(props: Props) {
       <Show when={!isSubredditMode()}>
         {/* Empty state (no query) */}
         <Show when={showEmpty()}>
-          <div class="px-4 py-4">
+          <div class="px-4 pt-4 pb-10 space-y-9">
             <Show when={recent().length > 0}>
-              <div class="mb-5">
+              <section>
                 <div class="flex items-center justify-between mb-2">
-                  <h2 class="text-sm font-semibold text-[var(--color-text)]">
-                    Recent
+                  <h2 class="text-base font-semibold text-[var(--color-text)]">
+                    Recent searches
                   </h2>
                   <button
                     onClick={() => {
@@ -959,7 +951,7 @@ function SearchResultsInner(props: Props) {
                             setRecent(getRecent());
                           }}
                           aria-label={`Remove "${item}"`}
-                          class="opacity-0 group-hover:opacity-100 px-3 py-3 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all"
+                          class="lg:opacity-0 lg:group-hover:opacity-100 focus-visible:opacity-100 px-3 py-3 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all"
                         >
                           <svg
                             width="12"
@@ -989,115 +981,64 @@ function SearchResultsInner(props: Props) {
                     )}
                   </For>
                 </div>
-              </div>
+              </section>
             </Show>
 
-            <h2 class="text-sm font-semibold text-[var(--color-text)] mb-3">
-              Browse
-            </h2>
-            <For each={props.browseLinks.filter((l) => l.desc)}>
-              {({ href, label, desc, svg }) => (
-                <a
-                  href={href}
-                  class="flex items-center gap-3.5 mb-2 px-4 py-3.5 rounded-control border border-[color-mix(in_srgb,var(--color-accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--color-accent)_12%,var(--color-surface-2))] hover:bg-[color-mix(in_srgb,var(--color-accent)_18%,var(--color-surface-2))] active:scale-[0.98] transition-all"
-                >
-                  <span class="flex items-center justify-center w-10 h-10 rounded-full bg-[var(--color-accent)] text-white shrink-0">
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      innerHTML={svg}
-                    />
-                  </span>
-                  <span class="flex-1 min-w-0">
-                    <span class="block text-[15px] font-semibold text-[var(--color-text)]">
-                      {label}
-                    </span>
-                    <span class="block text-xs text-[color-mix(in_srgb,var(--color-text)_70%,var(--color-accent))]">
-                      {desc}
-                    </span>
-                  </span>
-                </a>
-              )}
-            </For>
-            <div class="grid grid-cols-3 gap-2">
-              <For each={props.browseLinks.filter((l) => !l.desc)}>
-                {({ href, label, svg }) => (
-                  <a
-                    href={href}
-                    class="flex flex-col justify-between gap-5 min-h-[92px] p-3.5 rounded-control bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:bg-[var(--color-surface-3)] active:scale-[0.97] transition-all"
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.75"
-                      class="text-[var(--color-accent)]"
-                      innerHTML={svg}
-                    />
-                    <span class="text-sm font-medium text-[var(--color-text)] truncate">
-                      {label}
-                    </span>
-                  </a>
-                )}
-              </For>
-            </div>
-
             <Show when={popularTags.data?.tags.length}>
-              <h2 class="text-sm font-semibold text-[var(--color-text)] mt-8 mb-3">
-                Popular {(props.pageNameTags ?? "Tags").toLowerCase()}
-              </h2>
-              <div class="flex flex-wrap gap-2">
-                <For each={popularTags.data!.tags.slice(0, 24)}>
-                  {(tag) => (
-                    <a
-                      href={`/tags/${tag.id}`}
-                      class="inline-flex items-center gap-1.5 min-h-[36px] px-3.5 rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)] text-sm text-[var(--color-text)] hover:bg-[var(--color-surface-3)] active:scale-95 transition-all"
-                    >
-                      {tag.name}
-                      <span class="text-xs text-[var(--color-text-muted)] tabular-nums">
-                        {(tag.scene_count ?? 0) + (tag.image_count ?? 0)}
-                      </span>
-                    </a>
-                  )}
-                </For>
-              </div>
+              <section>
+                <SectionHeading href="/tags">
+                  Popular {(props.pageNameTags ?? "Tags").toLowerCase()}
+                </SectionHeading>
+                <div class="flex flex-wrap gap-2">
+                  <For each={popularTags.data!.tags.slice(0, 24)}>
+                    {(tag) => (
+                      <a
+                        href={`/tags/${tag.id}`}
+                        class="inline-flex items-center gap-1.5 min-h-[36px] px-3.5 rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)] text-sm text-[var(--color-text)] hover:bg-[var(--color-surface-3)] active:scale-95 transition-all"
+                      >
+                        {tag.name}
+                        <span class="text-xs text-[var(--color-text-muted)] tabular-nums">
+                          {(tag.scene_count ?? 0) + (tag.image_count ?? 0)}
+                        </span>
+                      </a>
+                    )}
+                  </For>
+                </div>
+              </section>
             </Show>
 
             <Show when={topPerformers.data?.performers.length}>
-              <h2 class="text-sm font-semibold text-[var(--color-text)] mt-8 mb-3">
-                Top {(props.pageNamePerformers ?? "Creators").toLowerCase()}
-              </h2>
-              <div class="grid grid-cols-4 gap-x-2 gap-y-4">
-                <For each={topPerformers.data!.performers.slice(0, 8)}>
-                  {(p) => (
-                    <a
-                      href={`/performers/${p.id}`}
-                      class="group flex flex-col items-center gap-2 min-w-0 active:scale-95 transition-transform"
-                    >
-                      <span class="flex items-center justify-center w-14 h-14 rounded-full overflow-hidden bg-[var(--color-surface-3)] border border-[var(--color-border)] text-base font-semibold text-[var(--color-text-muted)] group-hover:border-[var(--color-accent)] transition-colors">
-                        <Show when={p.image_path} fallback={p.name.charAt(0)}>
-                          <img
-                            src={proxyImage(p.image_path)!}
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                            class="w-full h-full object-cover"
-                          />
-                        </Show>
-                      </span>
-                      <span class="w-full text-center text-xs text-[var(--color-text)] truncate">
-                        {p.name}
-                      </span>
-                    </a>
-                  )}
-                </For>
-              </div>
+              <section>
+                <SectionHeading href="/performers">
+                  Top {(props.pageNamePerformers ?? "Creators").toLowerCase()}
+                </SectionHeading>
+                {/* One swipeable row on mobile, a single row of 8 on desktop */}
+                <div class="flex gap-4 -mx-4 px-4 overflow-x-auto [scrollbar-width:none] snap-x scroll-px-4 lg:grid lg:grid-cols-8 lg:gap-2 lg:mx-0 lg:px-0 lg:overflow-visible">
+                  <For each={topPerformers.data!.performers.slice(0, 8)}>
+                    {(p) => (
+                      <a
+                        href={`/performers/${p.id}`}
+                        class="group flex flex-col items-center gap-2 w-16 shrink-0 snap-start min-w-0 lg:w-auto active:scale-95 transition-transform"
+                      >
+                        <span class="flex items-center justify-center w-16 h-16 rounded-full overflow-hidden bg-[var(--color-surface-3)] border border-[var(--color-border)] text-base font-semibold text-[var(--color-text-muted)] group-hover:border-[var(--color-accent)] transition-colors">
+                          <Show when={p.image_path} fallback={p.name.charAt(0)}>
+                            <img
+                              src={proxyImage(p.image_path)!}
+                              alt=""
+                              loading="lazy"
+                              decoding="async"
+                              class="w-full h-full object-cover"
+                            />
+                          </Show>
+                        </span>
+                        <span class="w-full text-center text-xs text-[var(--color-text)] truncate">
+                          {p.name}
+                        </span>
+                      </a>
+                    )}
+                  </For>
+                </div>
+              </section>
             </Show>
           </div>
         </Show>
@@ -1204,5 +1145,21 @@ export default function SearchResults(props: Props) {
     <QueryClientProvider client={queryClient}>
       <SearchResultsInner {...props} />
     </QueryClientProvider>
+  );
+}
+
+function SectionHeading(props: { href: string; children: any }) {
+  return (
+    <div class="flex items-baseline justify-between mb-3">
+      <h2 class="text-base font-semibold text-[var(--color-text)]">
+        {props.children}
+      </h2>
+      <a
+        href={props.href}
+        class="text-sm font-medium text-[var(--color-accent)] hover:underline underline-offset-4"
+      >
+        See all
+      </a>
+    </div>
   );
 }

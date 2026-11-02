@@ -36,37 +36,6 @@ const from = Astro.url.searchParams.get("from") ?? "/";
         padding: max(28px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom));
       }
 
-      /* Two soft accent blooms — depth only, no media, nothing to leak pre-auth */
-      body::before,
-      body::after {
-        content: "";
-        position: fixed;
-        border-radius: 50%;
-        pointer-events: none;
-        z-index: 0;
-      }
-      body::before {
-        width: min(120vw, 900px);
-        aspect-ratio: 1;
-        top: -40vh;
-        left: -30vw;
-        background: radial-gradient(circle at center, color-mix(in srgb, var(--color-accent) 13%, transparent) 0%, transparent 68%);
-      }
-      body::after {
-        width: min(90vw, 640px);
-        aspect-ratio: 1;
-        bottom: -28vh;
-        right: -22vw;
-        background: radial-gradient(circle at center, color-mix(in srgb, var(--color-accent) 8%, transparent) 0%, transparent 70%);
-      }
-      /* Pure black wants a quieter bloom — no shadows to carry it */
-      :root[data-theme="oled"] body::before {
-        background: radial-gradient(circle at center, color-mix(in srgb, var(--color-accent) 9%, transparent) 0%, transparent 68%);
-      }
-      :root[data-theme="oled"] body::after {
-        background: radial-gradient(circle at center, color-mix(in srgb, var(--color-accent) 5%, transparent) 0%, transparent 70%);
-      }
-
       /* margin:auto not justify-content — keeps the top reachable on short viewports */
       .shell {
         position: relative;
@@ -132,7 +101,7 @@ const from = Astro.url.searchParams.get("from") ?? "/";
         transition:
           background-color 180ms var(--ease-out-quart),
           border-color 180ms var(--ease-out-quart),
-          transform 180ms var(--ease-spring);
+          transform 180ms var(--ease-out-quart);
       }
       .dot.on {
         background: var(--color-accent);

@@ -93,7 +93,7 @@ export default function MediaActionRail(props: Props) {
     <>
       {/* Contrast scrim, functional: guarantees icon legibility over bright media */}
       <div
-        class="absolute inset-x-0 bottom-0 h-1/3 pointer-events-none z-10 transition-opacity duration-300"
+        class="media-overlay absolute inset-x-0 bottom-0 h-1/3 pointer-events-none z-10 transition-opacity duration-300"
         classList={{ "opacity-0": !active() || dimmed() }}
         style={{
           background:
@@ -104,7 +104,7 @@ export default function MediaActionRail(props: Props) {
 
       <div
         ref={host}
-        class="absolute right-2 z-20 flex flex-col items-center gap-2.5 transition-opacity duration-300"
+        class="media-overlay absolute right-2 z-20 flex flex-col items-center gap-2.5 transition-opacity duration-300"
         classList={{
           "opacity-0 pointer-events-none": !active(),
           "opacity-40": active() && dimmed(),

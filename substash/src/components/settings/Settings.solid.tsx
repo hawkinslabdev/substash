@@ -40,6 +40,16 @@ export default function Settings(props: Props) {
   const [pinBoxes, setPinBoxes] = createSignal(["", "", "", "", "", ""]);
   const [pinError, setPinError] = createSignal("");
   const [pinLoading, setPinLoading] = createSignal(false);
+  const [pageNamesOpen, setPageNamesOpen] = createSignal(false);
+
+  const initialTab = location.hash.slice(1);
+  const [tab, setTab] = createSignal<Tab>(
+    TABS.some(([k]) => k === initialTab) ? (initialTab as Tab) : "general",
+  );
+  function selectTab(key: Tab) {
+    setTab(key);
+    history.replaceState(history.state, "", `#${key}`);
+  }
 
   const [accentTheme, setAccentThemeSignal] = createSignal(
     localStorage.getItem("substash:accent") ?? "reddit",
@@ -113,7 +123,6 @@ export default function Settings(props: Props) {
     }
   }
 
-  const [pageNamesOpen, setPageNamesOpen] = createSignal(false);
   const [pageNameTags, setPageNameTags] = createSignal(props.pageNameTags);
   const [pageNamePerformers, setPageNamePerformers] = createSignal(
     props.pageNamePerformers,
@@ -374,430 +383,311 @@ export default function Settings(props: Props) {
 
   return (
     <div class="pb-16">
-      {/* SECURITY */}
-      <SectionLabel>Security</SectionLabel>
-      <div class="border-t border-b border-[var(--color-border)] divide-y divide-[var(--color-border)]">
-        {/* PIN row */}
-        <Row>
-          <RowLabel title="PIN Protection" sub="6-character lock screen" />
-          <Show
-            when={pinEnabled()}
-            fallback={
-              <button
-                onClick={() => openPinForm("set")}
-                class="shrink-0 text-sm font-medium text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] transition-colors"
-              >
-                Set PIN
-              </button>
-            }
-          >
-            <div class="flex items-center gap-1 shrink-0">
-              <span class="text-xs text-emerald-400 font-medium mr-1">On</span>
-              <PillButton onClick={() => openPinForm("change")}>
-                Change
-              </PillButton>
-              <PillButton onClick={removePin} danger>
-                Remove
-              </PillButton>
-            </div>
-          </Show>
-        </Row>
-
-        {/* Session length row */}
-        <Show when={pinEnabled() && !showPinForm()}>
-          <Row>
-            <div class="min-w-0">
-              <p class="text-sm text-[var(--color-text)]">Session length</p>
-              <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
-                Time until automatic logout after inactivity.
-              </p>
-            </div>
-            {/* Custom +/- stepper */}
-            <div class="flex items-center shrink-0 rounded-control overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-3)]">
-              <button
-                onClick={() => adjustHours(-1)}
-                aria-label="Decrease"
-                class="w-11 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                >
-                  <path stroke-linecap="round" d="M5 12h14" />
-                </svg>
-              </button>
-              <span class="w-14 text-center text-sm font-semibold text-[var(--color-text)] border-x border-[var(--color-border)] self-stretch flex items-center justify-center">
-                {sessionHours() === 0 ? "∞" : sessionHours()}
-              </span>
-              <button
-                onClick={() => adjustHours(1)}
-                aria-label="Increase"
-                class="w-11 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                >
-                  <path stroke-linecap="round" d="M12 5v14M5 12h14" />
-                </svg>
-              </button>
-            </div>
-          </Row>
-        </Show>
-      </div>
-
-      {/* PIN entry form panel */}
-      <Show when={showPinForm()}>
-        <div class="border-b border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 pt-5 pb-6 space-y-5">
-          <p class="text-xs font-medium text-[var(--color-text-muted)]">
-            {pinFormMode() === "set"
-              ? "Choose a 6-character PIN"
-              : "Enter a new PIN"}
-          </p>
-          <div class="flex gap-3">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <input
-                id={`pin-box-${i}`}
-                type="text"
-                maxlength="1"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                autocomplete="off"
-                value={pinBoxes()[i]}
-                onInput={(e) => updateBox(i, e.currentTarget.value)}
-                onKeyDown={(e) => handleBoxKeyDown(e, i)}
-                class="w-11 h-13 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-control text-center text-lg font-semibold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] caret-[var(--color-accent)] transition-colors"
-              />
-            ))}
-          </div>
-          <Show when={pinError()}>
-            <p class="text-xs text-red-400">{pinError()}</p>
-          </Show>
-          <div class="flex items-center gap-5 pt-1">
+      <nav
+        aria-label="Settings sections"
+        class="flex items-center gap-6 px-4 border-b border-[var(--color-border)] overflow-x-auto [scrollbar-width:none]"
+      >
+        <For each={TABS}>
+          {([key, label]) => (
             <button
-              onClick={submitPin}
-              disabled={pinLoading()}
-              class="h-11 px-6 rounded-control bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
+              type="button"
+              onClick={() => selectTab(key)}
+              aria-current={tab() === key ? "page" : undefined}
+              class={`relative h-12 shrink-0 text-sm font-semibold whitespace-nowrap transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full ${
+                tab() === key
+                  ? "text-[var(--color-text)] after:bg-[var(--color-accent)]"
+                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              }`}
             >
-              {pinLoading() ? "Saving…" : "Save PIN"}
+              {label}
             </button>
-            <button
-              onClick={() => setShowPinForm(false)}
-              class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </Show>
+          )}
+        </For>
+      </nav>
 
-      {/* SHARING */}
-      <SectionLabel>Sharing</SectionLabel>
-      <div class="border-t border-b border-[var(--color-border)] divide-y divide-[var(--color-border)]">
-        <Row>
-          <div class="min-w-0">
-            <p class="text-sm text-[var(--color-text)]">Shorten share links</p>
-            {/* Share when disabled */}
-            <Show when={!shareEnabled()}>
-              <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
-                Sharing requires user login if a PIN is enabled.
-              </p>
-            </Show>
-            <Show when={shareEnabled()}>
-              <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
-                Anyone with the link can access this item without a PIN.
-              </p>
-            </Show>
-          </div>
-          {/* Toggle */}
-          <button
-            role="switch"
-            aria-checked={shareEnabled()}
-            onClick={() => toggleShare(!shareEnabled())}
-            class="shrink-0 flex items-center justify-center focus:outline-none"
-          >
-            <div
-              class={`inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent transition-colors duration-200 ${shareEnabled() ? "bg-[var(--color-accent)]" : "bg-[#404040]"}`}
-            >
-              <span
-                aria-hidden="true"
-                class={`inline-block h-5 w-5 rounded-full bg-white transition-transform duration-200 ease-in-out ${shareEnabled() ? "translate-x-5" : "translate-x-0"}`}
-                style={{ "box-shadow": "0 1px 4px rgba(0,0,0,0.5)" }}
-              />
-            </div>
-          </button>
-        </Row>
-      </div>
-
-      {/* DISPLAY */}
-      <SectionLabel>Display</SectionLabel>
-      <div class="border-t border-b border-[var(--color-border)]">
-        {/* Theme mode */}
-        <div class="px-4 py-4 border-b border-[var(--color-border)]">
-          <p class="text-xs text-[var(--color-text-muted)] mb-3">Appearance</p>
-          <div class="flex gap-3">
-            <For
-              each={
-                [
-                  {
-                    key: "dark",
-                    label: "Warm dark",
-                    bg: "#0d0d0d",
-                    card: "#1e1e1e",
-                  },
-                  {
-                    key: "oled",
-                    label: "OLED black",
-                    bg: "#000000",
-                    card: "#141414",
-                  },
-                ] as const
-              }
-            >
-              {(mode) => (
-                <button
-                  onClick={() => setThemeMode(mode.key)}
-                  aria-pressed={themeMode() === mode.key}
-                  class={`flex flex-col items-start gap-2 p-3 rounded-control border transition-colors ${
-                    themeMode() === mode.key
-                      ? "border-[var(--color-accent)]"
-                      : "border-[var(--color-border)] hover:border-[var(--color-text-muted)]/40"
-                  }`}
-                  style={{ background: mode.bg }}
-                >
-                  <span
-                    class="block w-16 h-8 rounded-inner border border-[var(--color-border)]"
-                    style={{ background: mode.card }}
-                    aria-hidden="true"
-                  />
-                  <span
-                    class={`text-xs font-medium ${
-                      themeMode() === mode.key
-                        ? "text-[var(--color-text)]"
-                        : "text-[var(--color-text-muted)]"
-                    }`}
-                  >
-                    {mode.label}
-                  </span>
-                </button>
-              )}
-            </For>
-          </div>
-        </div>
-
-        {/* Accent theme */}
-        <div class="px-4 py-4 border-b border-[var(--color-border)]">
-          <p class="text-xs text-[var(--color-text-muted)] mb-3">
-            Accent color
-          </p>
-          <div class="accent-swatches">
-            <For each={ACCENT_THEMES}>
-              {(theme) => (
-                <button
-                  class={`accent-swatch ${accentTheme() === theme.key ? "accent-swatch--on" : ""}`}
-                  style={{ "--sw": theme.sw }}
-                  onClick={() => setAccentTheme(theme.key)}
-                  title={theme.label}
-                  aria-label={theme.label}
-                >
-                  <Show when={accentTheme() === theme.key}>
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="3.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M5 13l4 4L19 7" />
-                    </svg>
-                  </Show>
-                </button>
-              )}
-            </For>
-          </div>
-        </div>
-
-        {/* Collapsible header row */}
-        <button
-          onClick={() => setScriptOpen((v) => !v)}
-          class="w-full flex items-center justify-between px-4 min-h-[56px] gap-4 hover:bg-[var(--color-surface-2)] transition-colors active:scale-[0.99]"
-        >
-          <div class="min-w-0 text-left">
-            <p class="text-sm text-[var(--color-text)]">Metadata expression</p>
-            <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
-              Control title, performer, origin, credit, and day
+      <Show when={tab() === "general"}>
+        <Section title="Appearance">
+          <div class="px-4 py-3">
+            <p class="text-sm font-medium text-[var(--color-text)] mb-3">
+              Theme
             </p>
-          </div>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            class={`shrink-0 text-[var(--color-text-muted)] transition-transform duration-200 ${scriptOpen() ? "rotate-180" : ""}`}
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m6 9 6 6 6-6"
-            />
-          </svg>
-        </button>
-
-        <Show when={scriptOpen()}>
-          <div class="px-4 pb-5 space-y-5 border-t border-[var(--color-border)]">
-            {/* Script editor */}
-            <div class="pt-4">
-              <div class="flex items-center justify-end mb-3">
-                <button
-                  onClick={resetTitleExpr}
-                  disabled={titleExpr() === DEFAULT_TITLE_EXPR}
-                  class="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] disabled:opacity-30 disabled:cursor-default transition-colors"
-                >
-                  Reset to default
-                </button>
-              </div>
-              <textarea
-                value={titleExpr()}
-                onInput={(e) => setTitleExpr(e.currentTarget.value)}
-                rows={6}
-                spellcheck={false}
-                autocomplete="off"
-                class={`w-full text-sm bg-[var(--color-surface-3)] border rounded-control px-3 py-2.5 text-[var(--color-text)] focus:outline-none transition-colors resize-y leading-relaxed ${
-                  titleExprValidation().ok
-                    ? "border-[var(--color-border)] focus:border-[var(--color-accent)]"
-                    : "border-red-500/60 focus:border-red-500"
-                }`}
-              />
-              <Show when={!titleExprValidation().ok}>
-                <p class="mt-1.5 text-xs text-red-400 leading-snug">
-                  {!titleExprValidation().ok &&
-                    (titleExprValidation() as { ok: false; error: string })
-                      .error}
-                </p>
-              </Show>
-            </div>
-
-            {/* Sample data + live variable inspector */}
-            <div class="space-y-3">
-              <p class="text-xs font-semibold text-[var(--color-text-muted)]">
-                Preview
-              </p>
-
-              {/* Editable inputs for Stash API fields */}
-              <p class="text-xs font-semibold text-[var(--color-text-muted)]">
-                Stash fields
-              </p>
-              <div class="grid grid-cols-2 gap-2">
-                {(
+            <div class="flex gap-3">
+              <For
+                each={
                   [
-                    [
-                      "title",
-                      sampleTitle,
-                      setSampleTitle,
-                      "dankmemes - This is fine?! …",
-                    ],
-                    [
-                      "basename",
-                      sampleBasename,
-                      setSampleBasename,
-                      "dankmemes - … #hash.jpg",
-                    ],
-                    ["studio", sampleStudio, setSampleStudio, "Example Studio"],
-                    [
-                      "performers",
-                      samplePerformers,
-                      setSamplePerformers,
-                      "Jane Doe, John Smith",
-                    ],
-                    ["tags", sampleTags, setSampleTags, "example, sample"],
-                    ["date", sampleDate, setSampleDate, "2026-04-24"],
-                  ] as [string, () => string, (v: string) => void, string][]
-                ).map(([name, get, set, ph]) => (
-                  <div>
-                    <label class="text-[11px] text-[var(--color-text-muted)] mb-1 block">
-                      {name}
-                    </label>
-                    <input
-                      type="text"
-                      value={get()}
-                      onInput={(e) => set(e.currentTarget.value)}
-                      placeholder={ph}
-                      class="w-full text-xs bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-inner px-2.5 py-1.5 text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {/* Parsed fields (R/O)*/}
-              <p class="text-xs font-semibold text-[var(--color-text-muted)] pt-1">
-                Parsed from title
-              </p>
-              <div class="grid grid-cols-2 gap-1.5">
-                <For
-                  each={
-                    [
-                      ["subreddit", sampleCtx().subreddit],
-                      ["postTitle", sampleCtx().postTitle],
-                      ["author", sampleCtx().author],
-                      ["dateStr", sampleCtx().dateStr],
-                      ["hash", sampleCtx().hash],
-                      ["clean", sampleCtx().clean],
-                    ] as [string, string | null][]
-                  }
-                >
-                  {([name, val]) => (
-                    <div class="px-2.5 py-1.5 bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-inner min-w-0">
-                      <p class="text-[10px] text-[var(--color-text-muted)] mb-0.5">
-                        {name}
-                      </p>
-                      <p class="text-[11px] text-[var(--color-text)] truncate">
-                        {val ?? <span class="opacity-30 italic">null</span>}
-                      </p>
-                    </div>
-                  )}
-                </For>
-              </div>
-
-              {/* Expression output */}
-              <p class="text-xs font-semibold text-[var(--color-text-muted)] pt-1">
-                Expression output
-              </p>
-              <Show
-                when={titleExprValidation().ok}
-                fallback={
-                  <p class="text-xs text-red-400 italic">
-                    Fix the expression to see a preview
-                  </p>
+                    {
+                      key: "dark",
+                      label: "Warm dark",
+                      bg: "#0d0d0d",
+                      card: "#1e1e1e",
+                    },
+                    {
+                      key: "oled",
+                      label: "OLED black",
+                      bg: "#000000",
+                      card: "#141414",
+                    },
+                  ] as const
                 }
               >
+                {(mode) => (
+                  <button
+                    onClick={() => setThemeMode(mode.key)}
+                    aria-pressed={themeMode() === mode.key}
+                    class={`flex flex-col items-start gap-2 p-3 rounded-control border transition-colors ${
+                      themeMode() === mode.key
+                        ? "border-[var(--color-accent)]"
+                        : "border-[var(--color-border)] hover:border-[var(--color-text-muted)]/40"
+                    }`}
+                    style={{ background: mode.bg }}
+                  >
+                    <span
+                      class="block w-16 h-8 rounded-inner border border-[var(--color-border)]"
+                      style={{ background: mode.card }}
+                      aria-hidden="true"
+                    />
+                    <span
+                      class={`text-xs font-medium ${
+                        themeMode() === mode.key
+                          ? "text-[var(--color-text)]"
+                          : "text-[var(--color-text-muted)]"
+                      }`}
+                    >
+                      {mode.label}
+                    </span>
+                  </button>
+                )}
+              </For>
+            </div>
+          </div>
+          <div class="px-4 py-3">
+            <p class="text-sm font-medium text-[var(--color-text)] mb-3">
+              Accent color
+            </p>
+            <div class="accent-swatches">
+              <For each={ACCENT_THEMES}>
+                {(theme) => (
+                  <button
+                    class={`accent-swatch ${accentTheme() === theme.key ? "accent-swatch--on" : ""}`}
+                    style={{ "--sw": theme.sw }}
+                    onClick={() => setAccentTheme(theme.key)}
+                    title={theme.label}
+                    aria-label={theme.label}
+                  >
+                    <Show when={accentTheme() === theme.key}>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                    </Show>
+                  </button>
+                )}
+              </For>
+            </div>
+          </div>
+        </Section>
+      </Show>
+
+      <Show when={tab() === "feed"}>
+        <Section title="Cards">
+          <Row>
+            <RowLabel
+              title="Show r/ prefix"
+              sub="Display r/ or u/ before community names in cards"
+            />
+            <Toggle
+              checked={feedShowPrefix()}
+              onChange={setFeedShowPrefix}
+              label="Show r/ prefix"
+            />
+          </Row>
+
+          {/* Fallback community name */}
+          <Row>
+            <RowLabel
+              title="Fallback community"
+              sub="Shown when no community is found in the title"
+            />
+            <div class="flex items-center shrink-0 gap-0 rounded-control overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-3)]">
+              <Show when={feedShowPrefix()}>
+                <span class="pl-3 pr-1 text-sm text-[var(--color-text-muted)] select-none">
+                  r/
+                </span>
+              </Show>
+              <input
+                type="text"
+                value={feedFallbackName()}
+                onInput={(e) => setFeedFallbackName(e.currentTarget.value)}
+                placeholder="discover"
+                class={`w-28 text-sm bg-transparent py-2 text-[var(--color-text)] focus:outline-none transition-colors ${feedShowPrefix() ? "pr-3" : "px-3"}`}
+              />
+            </div>
+          </Row>
+
+          {/* Save row */}
+          <Show when={feedDirty()}>
+            <div class="flex items-center gap-4 px-4 py-3">
+              <button
+                onClick={saveFeed}
+                disabled={feedSaving()}
+                class="h-9 px-5 rounded-control bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {feedSaving() ? "Saving…" : "Save"}
+              </button>
+              <p class="text-xs text-[var(--color-text-muted)]">
+                Unsaved changes
+              </p>
+            </div>
+          </Show>
+        </Section>
+        <Section title="Titles">
+          <button
+            onClick={() => setScriptOpen((v) => !v)}
+            class="w-full flex items-center justify-between px-4 min-h-[56px] gap-4 hover:bg-[var(--color-surface-2)] transition-colors active:scale-[0.99]"
+          >
+            <div class="min-w-0 text-left">
+              <p class="text-sm text-[var(--color-text)]">
+                Metadata expression
+              </p>
+              <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
+                Control title, performer, origin, credit, and day
+              </p>
+            </div>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class={`shrink-0 text-[var(--color-text-muted)] transition-transform duration-200 ${scriptOpen() ? "rotate-180" : ""}`}
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="m6 9 6 6 6-6"
+              />
+            </svg>
+          </button>
+
+          <Show when={scriptOpen()}>
+            <div class="px-4 pb-5 space-y-5 border-t border-[var(--color-border)]">
+              {/* Script editor */}
+              <div class="pt-4">
+                <div class="flex items-center justify-end mb-3">
+                  <button
+                    onClick={resetTitleExpr}
+                    disabled={titleExpr() === DEFAULT_TITLE_EXPR}
+                    class="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] disabled:opacity-30 disabled:cursor-default transition-colors"
+                  >
+                    Reset to default
+                  </button>
+                </div>
+                <textarea
+                  value={titleExpr()}
+                  onInput={(e) => setTitleExpr(e.currentTarget.value)}
+                  rows={6}
+                  spellcheck={false}
+                  autocomplete="off"
+                  class={`w-full text-sm bg-[var(--color-surface-3)] border rounded-control px-3 py-2.5 text-[var(--color-text)] focus:outline-none transition-colors resize-y leading-relaxed ${
+                    titleExprValidation().ok
+                      ? "border-[var(--color-border)] focus:border-[var(--color-accent)]"
+                      : "border-red-500/60 focus:border-red-500"
+                  }`}
+                />
+                <Show when={!titleExprValidation().ok}>
+                  <p class="mt-1.5 text-xs text-red-400 leading-snug">
+                    {!titleExprValidation().ok &&
+                      (titleExprValidation() as { ok: false; error: string })
+                        .error}
+                  </p>
+                </Show>
+              </div>
+
+              {/* Sample data + live variable inspector */}
+              <div class="space-y-3">
+                <p class="text-xs font-semibold text-[var(--color-text-muted)]">
+                  Preview
+                </p>
+
+                {/* Editable inputs for Stash API fields */}
+                <p class="text-xs font-semibold text-[var(--color-text-muted)]">
+                  Stash fields
+                </p>
+                <div class="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      [
+                        "title",
+                        sampleTitle,
+                        setSampleTitle,
+                        "dankmemes - This is fine?! …",
+                      ],
+                      [
+                        "basename",
+                        sampleBasename,
+                        setSampleBasename,
+                        "dankmemes - … #hash.jpg",
+                      ],
+                      [
+                        "studio",
+                        sampleStudio,
+                        setSampleStudio,
+                        "Example Studio",
+                      ],
+                      [
+                        "performers",
+                        samplePerformers,
+                        setSamplePerformers,
+                        "Jane Doe, John Smith",
+                      ],
+                      ["tags", sampleTags, setSampleTags, "example, sample"],
+                      ["date", sampleDate, setSampleDate, "2026-04-24"],
+                    ] as [string, () => string, (v: string) => void, string][]
+                  ).map(([name, get, set, ph]) => (
+                    <div>
+                      <label class="text-[11px] text-[var(--color-text-muted)] mb-1 block">
+                        {name}
+                      </label>
+                      <input
+                        type="text"
+                        value={get()}
+                        onInput={(e) => set(e.currentTarget.value)}
+                        placeholder={ph}
+                        class="w-full text-xs bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-inner px-2.5 py-1.5 text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Parsed fields (R/O)*/}
+                <p class="text-xs font-semibold text-[var(--color-text-muted)] pt-1">
+                  Parsed from title
+                </p>
                 <div class="grid grid-cols-2 gap-1.5">
                   <For
                     each={
                       [
-                        ["title", exprResult()?.title ?? null],
-                        ["performer", exprResult()?.performer ?? null],
-                        ["origin", exprResult()?.origin ?? null],
-                        ["credit", exprResult()?.credit ?? null],
-                        ["day", exprResult()?.day ?? null],
+                        ["subreddit", sampleCtx().subreddit],
+                        ["postTitle", sampleCtx().postTitle],
+                        ["author", sampleCtx().author],
+                        ["dateStr", sampleCtx().dateStr],
+                        ["hash", sampleCtx().hash],
+                        ["clean", sampleCtx().clean],
                       ] as [string, string | null][]
                     }
                   >
                     {([name, val]) => (
-                      <div class="px-2.5 py-1.5 bg-[var(--color-surface-3)] border border-[var(--color-accent)]/30 rounded-inner min-w-0">
+                      <div class="px-2.5 py-1.5 bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-inner min-w-0">
                         <p class="text-[10px] text-[var(--color-text-muted)] mb-0.5">
                           {name}
                         </p>
@@ -808,45 +698,85 @@ export default function Settings(props: Props) {
                     )}
                   </For>
                 </div>
-              </Show>
-            </div>
 
-            {/* Save */}
-            <div class="flex items-center gap-4">
-              <button
-                onClick={saveTitleExpr}
-                disabled={
-                  !titleExprValidation().ok ||
-                  !titleExprDirty() ||
-                  titleExprSaving()
-                }
-                class="h-10 px-5 rounded-control bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {titleExprSaving() ? "Saving…" : "Save"}
-              </button>
-              <Show
-                when={
-                  titleExprDirty() &&
-                  titleExprValidation().ok &&
-                  !titleExprSaving()
-                }
-              >
-                <p class="text-xs text-[var(--color-text-muted)]">
-                  Unsaved changes
+                {/* Expression output */}
+                <p class="text-xs font-semibold text-[var(--color-text-muted)] pt-1">
+                  Expression output
                 </p>
-              </Show>
-            </div>
-          </div>
-        </Show>
+                <Show
+                  when={titleExprValidation().ok}
+                  fallback={
+                    <p class="text-xs text-red-400 italic">
+                      Fix the expression to see a preview
+                    </p>
+                  }
+                >
+                  <div class="grid grid-cols-2 gap-1.5">
+                    <For
+                      each={
+                        [
+                          ["title", exprResult()?.title ?? null],
+                          ["performer", exprResult()?.performer ?? null],
+                          ["origin", exprResult()?.origin ?? null],
+                          ["credit", exprResult()?.credit ?? null],
+                          ["day", exprResult()?.day ?? null],
+                        ] as [string, string | null][]
+                      }
+                    >
+                      {([name, val]) => (
+                        <div class="px-2.5 py-1.5 bg-[var(--color-surface-3)] border border-[var(--color-accent)]/30 rounded-inner min-w-0">
+                          <p class="text-[10px] text-[var(--color-text-muted)] mb-0.5">
+                            {name}
+                          </p>
+                          <p class="text-[11px] text-[var(--color-text)] truncate">
+                            {val ?? <span class="opacity-30 italic">null</span>}
+                          </p>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+              </div>
 
-        {/* Page names are collapsible */}
-        <div class="border-t border-[var(--color-border)]">
+              {/* Save */}
+              <div class="flex items-center gap-4">
+                <button
+                  onClick={saveTitleExpr}
+                  disabled={
+                    !titleExprValidation().ok ||
+                    !titleExprDirty() ||
+                    titleExprSaving()
+                  }
+                  class="h-10 px-5 rounded-control bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {titleExprSaving() ? "Saving…" : "Save"}
+                </button>
+                <Show
+                  when={
+                    titleExprDirty() &&
+                    titleExprValidation().ok &&
+                    !titleExprSaving()
+                  }
+                >
+                  <p class="text-xs text-[var(--color-text-muted)]">
+                    Unsaved changes
+                  </p>
+                </Show>
+              </div>
+            </div>
+          </Show>
+        </Section>
+        <Section title="Names">
           <button
+            type="button"
             onClick={() => setPageNamesOpen((v) => !v)}
-            class="w-full flex items-center justify-between px-4 min-h-[56px] gap-4 hover:bg-[var(--color-surface-2)] transition-colors active:scale-[0.99]"
+            aria-expanded={pageNamesOpen()}
+            class="w-full flex items-center justify-between px-4 min-h-[64px] gap-4 hover:bg-[var(--color-surface-2)] transition-colors"
           >
             <div class="min-w-0 text-left">
-              <p class="text-sm text-[var(--color-text)]">Names</p>
+              <p class="text-sm font-medium text-[var(--color-text)]">
+                Page names
+              </p>
               <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
                 Rename the app and the {savedPageNames().tags},{" "}
                 {savedPageNames().performers}, and {savedPageNames().studios}{" "}
@@ -860,6 +790,7 @@ export default function Settings(props: Props) {
               fill="none"
               stroke="currentColor"
               stroke-width="2"
+              aria-hidden="true"
               class={`shrink-0 text-[var(--color-text-muted)] transition-transform duration-200 ${pageNamesOpen() ? "rotate-180" : ""}`}
             >
               <path
@@ -869,9 +800,8 @@ export default function Settings(props: Props) {
               />
             </svg>
           </button>
-
           <Show when={pageNamesOpen()}>
-            <div class="px-4 pb-5 space-y-4 border-t border-[var(--color-border)] pt-4">
+            <div class="px-4 pt-3 pb-2 space-y-4">
               {(
                 [
                   ["App name", appName, setAppName, "Substash"],
@@ -919,128 +849,202 @@ export default function Settings(props: Props) {
               </div>
             </div>
           </Show>
-        </div>
-      </div>
+        </Section>
+      </Show>
 
-      {/* FEED */}
-      <SectionLabel>Feed</SectionLabel>
-      <div class="border-t border-b border-[var(--color-border)] divide-y divide-[var(--color-border)]">
-        {/* Show r/ prefix toggle */}
-        <Row>
-          <RowLabel
-            title="Show r/ prefix"
-            sub="Display r/ or u/ before community names in cards"
-          />
-          <button
-            role="switch"
-            aria-checked={feedShowPrefix()}
-            onClick={() => setFeedShowPrefix((v) => !v)}
-            class="shrink-0 flex items-center justify-center focus:outline-none"
-          >
-            <div
-              class={`inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent transition-colors duration-200 ${feedShowPrefix() ? "bg-[var(--color-accent)]" : "bg-[#404040]"}`}
+      <Show when={tab() === "privacy"}>
+        <Section title="PIN lock">
+          <Row>
+            <RowLabel title="PIN Protection" sub="6-character lock screen" />
+            <Show
+              when={pinEnabled()}
+              fallback={
+                <button
+                  onClick={() => openPinForm("set")}
+                  class="shrink-0 text-sm font-medium text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] transition-colors"
+                >
+                  Set PIN
+                </button>
+              }
             >
-              <span
-                aria-hidden="true"
-                class={`inline-block h-5 w-5 rounded-full bg-white transition-transform duration-200 ease-in-out ${feedShowPrefix() ? "translate-x-5" : "translate-x-0"}`}
-                style={{ "box-shadow": "0 1px 4px rgba(0,0,0,0.5)" }}
-              />
-            </div>
-          </button>
-        </Row>
-
-        {/* Fallback community name */}
-        <Row>
-          <RowLabel
-            title="Fallback community"
-            sub="Shown when no community is found in the title"
-          />
-          <div class="flex items-center shrink-0 gap-0 rounded-control overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-3)]">
-            <Show when={feedShowPrefix()}>
-              <span class="pl-3 pr-1 text-sm text-[var(--color-text-muted)] select-none">
-                r/
-              </span>
+              <div class="flex items-center gap-1 shrink-0">
+                <span class="text-xs text-emerald-400 font-medium mr-1">
+                  On
+                </span>
+                <PillButton onClick={() => openPinForm("change")}>
+                  Change
+                </PillButton>
+                <PillButton onClick={removePin} danger>
+                  Remove
+                </PillButton>
+              </div>
             </Show>
-            <input
-              type="text"
-              value={feedFallbackName()}
-              onInput={(e) => setFeedFallbackName(e.currentTarget.value)}
-              placeholder="discover"
-              class={`w-28 text-sm bg-transparent py-2 text-[var(--color-text)] focus:outline-none transition-colors ${feedShowPrefix() ? "pr-3" : "px-3"}`}
+          </Row>
+          <Show when={pinEnabled() && !showPinForm()}>
+            <Row>
+              <div class="min-w-0">
+                <p class="text-sm text-[var(--color-text)]">Session length</p>
+                <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
+                  Time until automatic logout after inactivity.
+                </p>
+              </div>
+              {/* Custom +/- stepper */}
+              <div class="flex items-center shrink-0 rounded-control overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-3)]">
+                <button
+                  onClick={() => adjustHours(-1)}
+                  aria-label="Decrease"
+                  class="w-11 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                  >
+                    <path stroke-linecap="round" d="M5 12h14" />
+                  </svg>
+                </button>
+                <span class="w-14 text-center text-sm font-semibold text-[var(--color-text)] border-x border-[var(--color-border)] self-stretch flex items-center justify-center">
+                  {sessionHours() === 0 ? "∞" : sessionHours()}
+                </span>
+                <button
+                  onClick={() => adjustHours(1)}
+                  aria-label="Increase"
+                  class="w-11 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                  >
+                    <path stroke-linecap="round" d="M12 5v14M5 12h14" />
+                  </svg>
+                </button>
+              </div>
+            </Row>
+          </Show>
+          <Show when={showPinForm()}>
+            <div class="border-b border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 pt-5 pb-6 space-y-5">
+              <p class="text-xs font-medium text-[var(--color-text-muted)]">
+                {pinFormMode() === "set"
+                  ? "Choose a 6-character PIN"
+                  : "Enter a new PIN"}
+              </p>
+              <div class="flex gap-3">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <input
+                    id={`pin-box-${i}`}
+                    type="text"
+                    maxlength="1"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    autocomplete="off"
+                    value={pinBoxes()[i]}
+                    onInput={(e) => updateBox(i, e.currentTarget.value)}
+                    onKeyDown={(e) => handleBoxKeyDown(e, i)}
+                    class="w-11 h-13 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-control text-center text-lg font-semibold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)] caret-[var(--color-accent)] transition-colors"
+                  />
+                ))}
+              </div>
+              <Show when={pinError()}>
+                <p class="text-xs text-red-400">{pinError()}</p>
+              </Show>
+              <div class="flex items-center gap-5 pt-1">
+                <button
+                  onClick={submitPin}
+                  disabled={pinLoading()}
+                  class="h-11 px-6 rounded-control bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
+                >
+                  {pinLoading() ? "Saving…" : "Save PIN"}
+                </button>
+                <button
+                  onClick={() => setShowPinForm(false)}
+                  class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </Show>
+        </Section>
+        <Section title="Sharing">
+          <Row>
+            <div class="min-w-0">
+              <p class="text-sm text-[var(--color-text)]">
+                Shorten share links
+              </p>
+              {/* Share when disabled */}
+              <Show when={!shareEnabled()}>
+                <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
+                  Sharing requires user login if a PIN is enabled.
+                </p>
+              </Show>
+              <Show when={shareEnabled()}>
+                <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
+                  Anyone with the link can access this item without a PIN.
+                </p>
+              </Show>
+            </div>
+            {/* Toggle */}
+            <Toggle
+              checked={shareEnabled()}
+              onChange={(v) => toggleShare(v)}
+              label="Shorten share links"
             />
-          </div>
-        </Row>
+          </Row>
+        </Section>
+      </Show>
 
-        {/* Save row */}
-        <Show when={feedDirty()}>
-          <div class="flex items-center gap-4 px-4 py-3">
-            <button
-              onClick={saveFeed}
-              disabled={feedSaving()}
-              class="h-9 px-5 rounded-control bg-[var(--color-accent)] text-white text-sm font-semibold hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      <Show when={tab() === "library"}>
+        <Section
+          title="Stash tasks"
+          sub="Tasks run in Stash with the options from Stash's own Settings → Tasks tab."
+        >
+          <Row>
+            <RowLabel
+              title="Scan library"
+              sub="Find new files and metadata changes"
+            />
+            <PillButton
+              onClick={() => runTask("scan", "Library scan")}
+              disabled={runningTask() !== null}
             >
-              {feedSaving() ? "Saving…" : "Save"}
-            </button>
-            <p class="text-xs text-[var(--color-text-muted)]">
-              Unsaved changes
-            </p>
-          </div>
-        </Show>
-      </div>
+              {runningTask() === "scan" ? "Starting…" : "Run"}
+            </PillButton>
+          </Row>
+          <Row>
+            <RowLabel
+              title="Auto-tag"
+              sub={`Match ${savedPageNames().performers.toLowerCase()}, ${savedPageNames().studios.toLowerCase()}, and ${savedPageNames().tags.toLowerCase()} from filenames`}
+            />
+            <PillButton
+              onClick={() => runTask("autotag", "Auto-tag")}
+              disabled={runningTask() !== null}
+            >
+              {runningTask() === "autotag" ? "Starting…" : "Run"}
+            </PillButton>
+          </Row>
+          <Row>
+            <RowLabel
+              title="Generate sprites & previews"
+              sub="Thumbnails, previews, sprites, phashes"
+            />
+            <PillButton
+              onClick={() => runTask("generate", "Generate")}
+              disabled={runningTask() !== null}
+            >
+              {runningTask() === "generate" ? "Starting…" : "Run"}
+            </PillButton>
+          </Row>
+        </Section>
+      </Show>
 
-      {/* LIBRARY */}
-      <SectionLabel>Library</SectionLabel>
-      <div class="border-t border-b border-[var(--color-border)] divide-y divide-[var(--color-border)]">
-        <Row>
-          <RowLabel
-            title="Scan library"
-            sub="Find new files and metadata changes"
-          />
-          <PillButton
-            onClick={() => runTask("scan", "Library scan")}
-            disabled={runningTask() !== null}
-          >
-            {runningTask() === "scan" ? "Starting…" : "Scan"}
-          </PillButton>
-        </Row>
-        <Row>
-          <RowLabel
-            title="Auto-tag"
-            sub={`Match ${savedPageNames().performers.toLowerCase()}, ${savedPageNames().studios.toLowerCase()}, and ${savedPageNames().tags.toLowerCase()} from filenames`}
-          />
-          <PillButton
-            onClick={() => runTask("autotag", "Auto-tag")}
-            disabled={runningTask() !== null}
-          >
-            {runningTask() === "autotag" ? "Starting…" : "Run"}
-          </PillButton>
-        </Row>
-        <Row>
-          <RowLabel
-            title="Generate sprites & previews"
-            sub="Thumbnails, previews, sprites, phashes"
-          />
-          <PillButton
-            onClick={() => runTask("generate", "Generate")}
-            disabled={runningTask() !== null}
-          >
-            {runningTask() === "generate" ? "Starting…" : "Run"}
-          </PillButton>
-        </Row>
-        <p class="px-4 py-3 text-xs text-[var(--color-text-muted)]">
-          Tasks run in Stash using the options configured in Stash's own
-          Settings → Tasks tab. Substash only triggers them.
-        </p>
-      </div>
-
-      {/* ABOUT */}
       <footer class="flex items-center justify-center gap-2 px-4 pt-12 pb-6 text-xs text-[var(--color-text-muted)]">
-        <span>
-          Substash
-          {import.meta.env.VITE_APP_VERSION &&
-            ` ${import.meta.env.VITE_APP_VERSION}`}
-        </span>
-        <span aria-hidden="true">·</span>
         <a
           href="https://github.com/hawkinslabdev/substash"
           target="_blank"
@@ -1063,19 +1067,35 @@ export default function Settings(props: Props) {
   );
 }
 
-function SectionLabel(props: { children: string }) {
+const TABS = [
+  ["general", "General"],
+  ["feed", "Feed"],
+  ["privacy", "Privacy"],
+  ["library", "Library"],
+] as const;
+type Tab = (typeof TABS)[number][0];
+
+function Section(props: { title: string; sub?: string; children: any }) {
   return (
-    <div class="px-4 pt-10 pb-2.5">
-      <p class="text-sm font-semibold text-[var(--color-text)]">
-        {props.children}
-      </p>
-    </div>
+    <section class="pt-8">
+      <div class="px-4 pb-2">
+        <h2 class="text-base font-semibold text-[var(--color-text)]">
+          {props.title}
+        </h2>
+        {props.sub && (
+          <p class="text-xs text-[var(--color-text-muted)] mt-1 max-w-[60ch]">
+            {props.sub}
+          </p>
+        )}
+      </div>
+      {props.children}
+    </section>
   );
 }
 
 function Row(props: { children: any }) {
   return (
-    <div class="flex items-center justify-between px-4 min-h-[56px] gap-4">
+    <div class="flex items-center justify-between px-4 min-h-[64px] gap-4">
       {props.children}
     </div>
   );
@@ -1084,11 +1104,38 @@ function Row(props: { children: any }) {
 function RowLabel(props: { title: string; sub?: string }) {
   return (
     <div class="min-w-0">
-      <p class="text-sm text-[var(--color-text)]">{props.title}</p>
+      <p class="text-sm font-medium text-[var(--color-text)]">{props.title}</p>
       {props.sub && (
         <p class="text-xs text-[var(--color-text-muted)] mt-0.5">{props.sub}</p>
       )}
     </div>
+  );
+}
+
+function Toggle(props: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={props.checked}
+      aria-label={props.label}
+      onClick={() => props.onChange(!props.checked)}
+      class="shrink-0 flex items-center justify-center focus:outline-none"
+    >
+      {/* Track lives inside: the button keeps the global 44px touch target */}
+      <span
+        class={`inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent transition-colors duration-200 ${props.checked ? "bg-[var(--color-accent)]" : "bg-[#404040]"}`}
+      >
+        <span
+          aria-hidden="true"
+          class={`inline-block h-5 w-5 rounded-full bg-white shadow-[0_1px_3px_rgb(0_0_0/0.4)] transition-transform duration-200 ${props.checked ? "translate-x-5" : "translate-x-0"}`}
+        />
+      </span>
+    </button>
   );
 }
 
@@ -1100,9 +1147,10 @@ function PillButton(props: {
 }) {
   return (
     <button
+      type="button"
       onClick={props.onClick}
       disabled={props.disabled}
-      class={`text-xs px-2.5 py-1.5 rounded-inner transition-colors hover:bg-[var(--color-surface-3)] disabled:opacity-40 disabled:cursor-not-allowed ${props.danger ? "text-red-400 hover:text-red-300" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
+      class={`shrink-0 h-9 px-4 rounded-full text-sm font-semibold bg-[var(--color-surface-3)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${props.danger ? "text-red-400 hover:bg-red-500/15" : "text-[var(--color-text)] hover:bg-[var(--color-border)]"}`}
     >
       {props.children}
     </button>

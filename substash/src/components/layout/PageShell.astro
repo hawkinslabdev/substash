@@ -53,6 +53,11 @@ const pageTitle = title.replaceAll(DEFAULT_APP_NAME, appName);
             document.documentElement.style.removeProperty('--sidebar-width-desktop');
             document.documentElement.removeAttribute('data-sidebar-collapsed');
           }
+          if (localStorage.getItem('substash:density') === 'compact') {
+            document.documentElement.setAttribute('data-feed-density', 'compact');
+          } else {
+            document.documentElement.removeAttribute('data-feed-density');
+          }
           const accent = localStorage.getItem('substash:accent');
           if (accent) {
             document.documentElement.setAttribute('data-accent', accent);
@@ -189,7 +194,7 @@ const pageTitle = title.replaceAll(DEFAULT_APP_NAME, appName);
         (e.g. a Stash fetch). It's position:fixed, so DOM order is visual-neutral. */}
     <slot name="nav" />
     <main transition:animate="fade">
-      <div class="lg:max-w-[720px] lg:mx-auto">
+      <div class="lg:max-w-[768px] lg:mx-auto lg:px-6 lg:py-6">
         <slot />
       </div>
     </main>

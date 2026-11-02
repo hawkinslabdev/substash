@@ -66,13 +66,13 @@ const imgSrc = proxyImage(image.paths.preview || image.paths.thumbnail);
 
 
 <PageShell title={`Substash: ${displayTitle}`}>
-  <header class="header-glass sticky top-0 z-10 px-4 py-3 flex items-center gap-3">
-    <button onclick="history.back()" aria-label="Go back" class="text-[var(--color-text-muted)]">
+  <header class="header-glass sticky top-0 z-10 px-5 py-4 flex items-center gap-3">
+    <button onclick="history.back()" aria-label="Go back" class="page-back text-[var(--color-text-muted)]">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
       </svg>
     </button>
-    <p class="text-sm font-medium truncate">{displayTitle}</p>
+    <p class="page-title text-sm font-medium truncate">{displayTitle}</p>
   </header>
 
   {/* Image / GIF (video) */}

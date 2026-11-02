@@ -102,27 +102,41 @@ const drawerLinks = [
 >
 
   <!-- Desktop: categorized sidebar nav -->
-  <div class="hidden lg:flex flex-col flex-1 overflow-y-auto overflow-x-hidden py-4 gap-5">
-    {navSections.map(({ category, links }) => (
-      <div>
-        <p class="nav-category px-4 mb-1.5 text-xs font-semibold text-[var(--color-text-muted)] select-none whitespace-nowrap overflow-hidden">
+  <div class="hidden lg:flex flex-col flex-1 overflow-y-auto overflow-x-hidden py-2">
+    {navSections.map(({ category, links }, i) => {
+      // Primary feed links and one-link groups stand alone, like Reddit's top block
+      const collapsible = i > 0 && links.length > 1;
+      return (
+      <>
+      {i > 0 && <hr class="mx-4 my-2 border-[var(--color-border)]" />}
+      <div class="nav-section" data-section={category}>
+        {collapsible && (
+        <button
+          type="button"
+          class="nav-category flex items-center justify-between w-[calc(100%-1.5rem)] mx-3 h-10 px-3 rounded-control text-[13px] font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text)] select-none whitespace-nowrap overflow-hidden transition-colors"
+          aria-expanded="true"
+        >
           {category}
-        </p>
-        <div class="px-3 space-y-0.5">
+          <svg class="nav-chevron shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+        )}
+        <div class="nav-links px-3 space-y-0.5">
           {links.map(({ href, label, svg }) => (
             <a
               href={href}
-              class="nav-desktop-link flex items-center gap-3 px-3 py-2.5 rounded-control text-sm font-medium transition-colors whitespace-nowrap"
+              class="nav-desktop-link flex items-center gap-3.5 px-3 h-10 rounded-control text-sm font-medium transition-colors whitespace-nowrap"
               title={label}
             >
               <svg
-                width="18"
-                height="18"
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="1.75"
-                class="shrink-0"
+                class="nav-icon shrink-0"
                 set:html={svg}
               />
               <span class="nav-label">{label}</span>
@@ -130,7 +144,9 @@ const drawerLinks = [
           ))}
         </div>
       </div>
-    ))}
+      </>
+      );
+    })}
 
     <!-- Log off (desktop sidebar — pushed to bottom, separated as destructive zone) -->
     <div class="mt-auto px-3 pt-3 border-t border-[var(--color-border)]">
@@ -156,30 +172,6 @@ const drawerLinks = [
       </button>
     </div>
   </div>
-
-  <!-- Desktop: collapse toggle -->
-  <button
-    id="sidebar-toggle"
-    class="hidden lg:flex items-center justify-center w-full h-10 shrink-0
-      border-t border-[var(--color-border)]
-      text-[var(--color-text-muted)] hover:text-[var(--color-text)]
-      hover:bg-[var(--color-surface-3)] transition-colors"
-    aria-label="Toggle sidebar"
-    title="Toggle sidebar"
-  >
-    <svg
-      id="toggle-icon"
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      style="transition: transform 250ms ease"
-    >
-      <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/>
-    </svg>
-  </button>
 
   <!-- Mobile: floating pill nav -->
   <div class="flex lg:hidden items-center gap-0.5">
@@ -426,8 +418,8 @@ const drawerLinks = [
   }
   #logout-modal[data-open] #logout-modal-backdrop {
     background: rgb(0 0 0 / 0.55);
-    -webkit-backdrop-filter: blur(12px) saturate(0.85);
-    backdrop-filter: blur(12px) saturate(0.85);
+    -webkit-backdrop-filter: blur(24px) saturate(0.85);
+    backdrop-filter: blur(24px) saturate(0.85);
   }
   @supports not (
     (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
@@ -491,14 +483,17 @@ const drawerLinks = [
 
   /* Desktop link states */
   .nav-desktop-link {
-    color: var(--color-text-muted);
+    color: var(--color-text);
   }
   .nav-desktop-link:hover {
     background-color: color-mix(in srgb, var(--color-surface-3) 60%, transparent);
-    color: var(--color-text);
   }
+  /* Reddit-style active row: filled pill, bolder label, accent only on the icon */
   .nav-desktop-link[aria-current="page"] {
     background-color: var(--color-surface-3);
+    font-weight: 600;
+  }
+  .nav-desktop-link[aria-current="page"] .nav-icon {
     color: var(--color-accent);
   }
 
@@ -536,6 +531,17 @@ const drawerLinks = [
     color: var(--color-text);
   }
 
+  /* Closed sections still show their icons when the whole sidebar is collapsed */
+  :global(:root:not([data-sidebar-collapsed])) .nav-section[data-closed] .nav-links {
+    display: none;
+  }
+  .nav-chevron {
+    transition: transform 200ms var(--ease-out-quart);
+  }
+  .nav-section[data-closed] .nav-chevron {
+    transform: rotate(-90deg);
+  }
+
   /* Collapsed sidebar */
   :global(:root[data-sidebar-collapsed]) .nav-label,
   :global(:root[data-sidebar-collapsed]) .nav-category {
@@ -546,9 +552,6 @@ const drawerLinks = [
     justify-content: center;
     padding-left: 0;
     padding-right: 0;
-  }
-  :global(:root[data-sidebar-collapsed]) #toggle-icon {
-    transform: rotate(180deg);
   }
 </style>
 
@@ -566,8 +569,49 @@ const drawerLinks = [
     });
   }
 
+  const SECTIONS_KEY = 'substash:nav-closed';
+
+  function readClosedSections(): string[] {
+    try {
+      const v = JSON.parse(localStorage.getItem(SECTIONS_KEY) ?? '[]');
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function setSectionClosed(section: HTMLElement, closed: boolean) {
+    section.toggleAttribute('data-closed', closed);
+    section.querySelector('.nav-category')?.setAttribute('aria-expanded', String(!closed));
+  }
+
+  function initSections() {
+    const closed = readClosedSections();
+    document.querySelectorAll<HTMLElement>('#sidebar .nav-section').forEach((section) => {
+      // Headerless sections can't be reopened, so never restore them closed
+      const collapsible = section.querySelector('.nav-category') !== null;
+      setSectionClosed(section, collapsible && closed.includes(section.dataset.section ?? ''));
+    });
+  }
+
+  // Delegated once: survives view-transition swaps of the sidebar markup
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('#sidebar .nav-category');
+    const section = btn?.closest<HTMLElement>('.nav-section');
+    if (!section) return;
+    const name = section.dataset.section ?? '';
+    const nowClosed = !section.hasAttribute('data-closed');
+    setSectionClosed(section, nowClosed);
+    const closed = readClosedSections().filter((s) => s !== name);
+    if (nowClosed) closed.push(name);
+    try {
+      localStorage.setItem(SECTIONS_KEY, JSON.stringify(closed));
+    } catch {}
+  });
+
   function initSidebar() {
     updateActiveState();
+    initSections();
 
     const toggle = document.getElementById('sidebar-toggle');
     if (!toggle) return;
@@ -591,9 +635,11 @@ const drawerLinks = [
 
     const newToggle = toggle.cloneNode(true) as HTMLButtonElement;
     toggle.replaceWith(newToggle);
+    newToggle.setAttribute('aria-expanded', String(!isCurrentlyCollapsed));
     newToggle.addEventListener('click', () => {
       const nowCollapsed = !document.documentElement.hasAttribute('data-sidebar-collapsed');
       applyState(nowCollapsed);
+      newToggle.setAttribute('aria-expanded', String(!nowCollapsed));
       localStorage.setItem(STORAGE_KEY, nowCollapsed ? 'collapsed' : 'expanded');
     });
   }

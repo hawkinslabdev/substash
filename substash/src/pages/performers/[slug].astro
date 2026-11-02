@@ -94,7 +94,7 @@ const displayName = performer?.name ?? slug ?? "Performer";
 <PageShell title={`Substash: ${displayName}`}>
   <header class="header-glass sticky top-0 z-10">
     <div class="flex items-center gap-3 px-4 py-3">
-      <a href="/performers" class="text-[var(--color-text-muted)]">
+      <a href="/performers" class="page-back text-[var(--color-text-muted)]">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
         </svg>
@@ -108,7 +108,7 @@ const displayName = performer?.name ?? slug ?? "Performer";
           class="w-8 h-8 rounded-full flex-shrink-0"
         />
       )}
-      <h1 class="text-base font-semibold truncate">{displayName}</h1>
+      <h1 class="page-title text-base font-semibold truncate">{displayName}</h1>
       <a
         href={`/discover?performer=${slug}`}
         aria-label="Play as feed"
